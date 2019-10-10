@@ -149,6 +149,16 @@ main(int argc, char **argv)
 	 */
 	check_cluster_compatibility(live_check);
 
+	/* Set mask based on PGDATA permissions */
+	if (!is_skip_target_check())
+	{
+		if (!GetDataDirectoryCreatePerm(new_cluster.pgdata))
+			pg_fatal("could not read permissions of directory \"%s\": %s\n",
+					new_cluster.pgdata, strerror(errno));
+		umask(pg_mode_mask);
+	}
+
+
 	check_and_dump_old_cluster(live_check, &sequence_script_file_name);
 
 	/* -- NEW -- */
