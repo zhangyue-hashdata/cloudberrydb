@@ -172,8 +172,8 @@ run_log(
 		$node_standby->logfile, 'start', '-o', "--cluster-name=standby_8 -c gp_role=utility --gp_dbid=9 --gp_contentid=0"
 	]);
 
-# wait for postgres to terminate
-foreach my $i (0 .. 10 * $TestLib::timeout_default)
+# wait up to 180s for postgres to terminate
+foreach my $i (0..1800)
 {
 	last if !-f $node_standby->data_dir . '/postmaster.pid';
 	usleep(100_000);
