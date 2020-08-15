@@ -156,18 +156,6 @@ complex_decode_double(char **num_p)
 			 errmsg("invalid input syntax for type complex: \"%s\"",
 					orig_num)));
 	}
-#ifdef HAVE_BUGGY_SOLARIS_STRTOD
-	else
-	{
-		/*
-		 * Many versions of Solaris have a bug wherein strtod sets endptr to
-		 * point one byte beyond the end of the string when given "inf" or
-		 * "infinity".
-		 */
-		if (endptr != num && endptr[-1] == '\0')
-			endptr--;
-	}
-#endif   /* HAVE_BUGGY_SOLARIS_STRTOD */
 
 	/*** end of float8in ***/
 
