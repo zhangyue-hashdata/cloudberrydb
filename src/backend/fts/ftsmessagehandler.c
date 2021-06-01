@@ -28,6 +28,7 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "replication/gp_replication.h"
+#include "replication/walsender.h"
 #include "storage/fd.h"
 
 #define FTS_PROBE_FILE_NAME "fts_probe_file.bak"
@@ -277,13 +278,15 @@ HandleFtsWalRepProbe(void)
 		if (IS_QUERY_DISPATCHER())
 			ShmemSegmentConfigsCacheReset();
 #endif
-		GetMirrorStatus(&response);
+		bool ready_for_syncrep;
+
+		GetMirrorStatus(&response, &ready_for_syncrep);
 
 		/*
 		 * We check response.IsSyncRepEnabled even though syncrep is again checked
 		 * later in the set function to avoid acquiring the SyncRepLock again.
 		 */
-		if (response.IsMirrorUp && !response.IsSyncRepEnabled)
+		if (!response.IsSyncRepEnabled && ready_for_syncrep)
 		{
 			SetSyncStandbysDefined();
 			/* Syncrep is enabled now, so respond accordingly. */
@@ -316,7 +319,7 @@ HandleFtsWalRepSyncRepOff(void)
 	ereport(LOG,
 			(errmsg("turning off synchronous wal replication due to FTS request")));
 	UnsetSyncStandbysDefined();
-	GetMirrorStatus(&response);
+	GetMirrorStatus(&response, NULL);
 
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
 }
