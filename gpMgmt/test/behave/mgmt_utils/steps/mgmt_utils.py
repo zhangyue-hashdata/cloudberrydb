@@ -450,7 +450,6 @@ def impl(context, content):
     desired_result = 0
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
-<<<<<<< HEAD
 
     # Wait for replication state to be in 'sync'
     query = "SELECT sync_state FROM pg_stat_replication;"
@@ -501,8 +500,6 @@ def impl(context, logdir):
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
-=======
->>>>>>> 612fe6578b (recoverseg/addmirrors/movemirrors: Start each mirror independently)
 
 @then( 'verify if the gprecoverseg.lock directory is present in coordinator_data_directory')
 def impl(context):
@@ -985,11 +982,8 @@ def impl(context):
 
 @then('the segments are synchronized for content {content_ids}')
 def impl(context, content_ids):
-<<<<<<< HEAD
     if content_ids == 'None':
         return
-=======
->>>>>>> 612fe6578b (recoverseg/addmirrors/movemirrors: Start each mirror independently)
     times = 60
     sleeptime = 10
     content_ids_to_check = [int(c) for c in content_ids.split(',')]
@@ -1613,16 +1607,6 @@ def impl(context):
     return
 
 
-<<<<<<< HEAD
-@given('verify that mirror on content {content_ids} is {expected_status}')
-@when('verify that mirror on content {content_ids} is {expected_status}')
-@then('verify that mirror on content {content_ids} is {expected_status}')
-def impl(context, content_ids, expected_status):
-    if content_ids == 'None':
-        return
-    if expected_status not in ('up', 'down'):
-        raise Exception("expected_status can only be 'up' or 'down'")
-=======
 @then('the {segment_type} for content {content_ids} are up')
 def impl(context, segment_type, content_ids):
     role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
@@ -1632,9 +1616,12 @@ def impl(context, segment_type, content_ids):
 
     return
 
-
+@given('verify that mirror on content {content_ids} is {expected_status}')
+@when('verify that mirror on content {content_ids} is {expected_status}')
 @then('verify that mirror on content {content_ids} is {expected_status}')
 def impl(context, content_ids, expected_status):
+    if content_ids == 'None':
+        return
     if expected_status not in ('up', 'down'):
         raise Exception("expected_status can only be 'up' or 'down'")
 
@@ -1659,7 +1646,6 @@ def impl(context, content):
 @then('the "{seg}" segment information is saved')
 def impl(context, seg):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
->>>>>>> 612fe6578b (recoverseg/addmirrors/movemirrors: Start each mirror independently)
 
     for content in content_ids.split(','):
         if expected_status == 'up' and not is_segment_running(ROLE_MIRROR, int(content)):
@@ -2715,25 +2701,17 @@ def impl(context):
     for file in files_found:
         os.remove(file)
 
-<<<<<<< HEAD
 
 @given('all files in gpAdminLogs directory are deleted on hosts {hosts}')
 def impl(context, hosts):
     host_list = hosts.split(',')
     log_dir = _get_gpAdminLogs_directory()
-=======
-@given('all files in gpAdminLogs directory are deleted on hosts {hosts}')
-def impl(context, hosts):
-    host_list = hosts.split(',')
-    log_dir = "~/gpAdminLogs"
->>>>>>> 612fe6578b (recoverseg/addmirrors/movemirrors: Start each mirror independently)
     for host in host_list:
         rm_cmd = Command(name="remove files in gpAdminLogs",
                               cmdStr="rm -rf {}/*".format(log_dir),
                               remoteHost=host, ctxt=REMOTE)
         rm_cmd.run(validateAfter=True)
 
-<<<<<<< HEAD
 @given('all files in "{dir}" directory are deleted on all hosts in the cluster')
 @then('all files in "{dir}" directory are deleted on all hosts in the cluster')
 def impl(context, dir):
@@ -2756,8 +2734,6 @@ def impl(context):
                          remoteHost=host, ctxt=REMOTE)
         rm_cmd.run(validateAfter=True)
 
-=======
->>>>>>> 612fe6578b (recoverseg/addmirrors/movemirrors: Start each mirror independently)
 
 @then('gpAdminLogs directory {has} "{expected_file}" files')
 def impl(context, has, expected_file):
