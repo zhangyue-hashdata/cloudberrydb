@@ -461,7 +461,7 @@ def impl(context, logdir):
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
-    num_retries = 6000
+    num_retries = 60000
     log_dir = _get_gpAdminLogs_directory() if logdir == 'gpAdminLogs' else logdir
     recovery_progress_file = '{}/recovery_progress.file'.format(log_dir)
     while attempt < num_retries:
@@ -2631,7 +2631,19 @@ def impl(context, hosts):
                               remoteHost=host, ctxt=REMOTE)
         rm_cmd.run(validateAfter=True)
 
+@given('all files in "{dir}" directory are deleted on all hosts in the cluster')
+@then('all files in "{dir}" directory are deleted on all hosts in the cluster')
+def impl(context, dir):
+    host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
+    for host in host_list:
+        rm_cmd = Command(name="remove files in {}".format(dir),
+                         cmdStr="rm -rf {}/*".format(dir),
+                         remoteHost=host, ctxt=REMOTE)
+        rm_cmd.run(validateAfter=True)
+
 @given('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
+@when('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
+@then('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
 def impl(context):
     host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     log_dir = _get_gpAdminLogs_directory()
