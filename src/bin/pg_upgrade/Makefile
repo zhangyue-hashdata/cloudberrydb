@@ -50,9 +50,7 @@ uninstall:
 clean distclean maintainer-clean:
 	rm -f pg_upgrade$(X) $(OBJS)
 	rm -rf delete_old_cluster.sh log/ tmp_check/ \
-	       loadable_libraries.txt reindex_hash.sql \
-	       pg_upgrade_dump_globals.sql \
-	       pg_upgrade_dump_*.custom pg_upgrade_*.log \
+		   reindex_hash.sql \
 		   clusterConfigPostgresAddonsFile clusterConfigFile gpdemo-env.sh \
 		   hostfile regression.diffs aomd_filehandler.c
 
