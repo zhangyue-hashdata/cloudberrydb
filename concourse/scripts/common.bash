@@ -124,7 +124,7 @@ function make_cluster() {
     export STATEMENT_MEM=250MB
 
     pushd gpdb_src/gpAux/gpdemo
-    su gpadmin -c "source $INSTALL_DIR/greenplum_path.sh; LANG=en_US.utf8 make create-demo-cluster"
+    su gpadmin -c "source $INSTALL_DIR/greenplum_path.sh; LANG=en_US.utf8 make create-demo-cluster WITH_MIRRORS=${WITH_MIRRORS:-true}"
 
     if [[ "$MAKE_TEST_COMMAND" =~ gp_interconnect_type=proxy ]]; then
         # generate the addresses for proxy mode
