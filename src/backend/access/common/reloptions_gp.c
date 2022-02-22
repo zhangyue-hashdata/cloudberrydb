@@ -1103,10 +1103,10 @@ get_option_set(relopt_value *options, int num_options, const char *opt_name)
  * Check if the name is one of the ENCODING clauses.
  */
 bool
-is_storage_encoding_directive(char *name)
+is_storage_encoding_directive(const char *name)
 {
 	/* names we expect to see in ENCODING clauses */
-	static char *storage_directive_names[] = {"compresstype", 
+	static const char *storage_directive_names[] = {"compresstype", 
 						"compresslevel",
 						"blocksize"};
 

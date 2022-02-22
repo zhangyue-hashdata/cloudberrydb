@@ -181,7 +181,7 @@ update_type_encoding(Oid typid, Datum typoptions)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(typid));
 	scan = systable_beginscan(pgtypeenc, TypeEncodingTypidIndexId, true,
-								NULL, 1, &scankey);
+							  NULL, 1, &scankey);
 
 	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
@@ -200,7 +200,7 @@ update_type_encoding(Oid typid, Datum typoptions)
 		values[Anum_pg_type_encoding_typoptions - 1] = typoptions;
 
 		newtuple = heap_modify_tuple(tup, RelationGetDescr(pgtypeenc),
-										values, nulls, replaces);
+									 values, nulls, replaces);
 
 		CatalogTupleUpdate(pgtypeenc, &tup->t_self, newtuple);
 	}
@@ -1061,7 +1061,6 @@ moveArrayTypeName(Oid typeOid, const char *typeName, Oid typeNamespace)
 
 	return true;
 }
-
 
 /*
  * makeMultirangeTypeName

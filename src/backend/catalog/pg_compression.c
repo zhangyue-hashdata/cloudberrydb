@@ -47,16 +47,6 @@
 
 #include "catalog/gp_indexing.h"
 
-/*
- * GPDB_12_MERGE_FIXME:
- *		This enumaration does not fit in pg_compression. Also it should probably
- *		be treated as a new reloption kind and be unified in reloptions_gp
- */
-/* names we expect to see in ENCODING clauses */
-char *storage_directive_names[] = {"compresstype", "compresslevel",
-								   "blocksize", NULL};
-
-
 #ifdef HAVE_LIBZ
 /* Internal state for zlib */
 typedef struct zlib_state

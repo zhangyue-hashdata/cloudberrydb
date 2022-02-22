@@ -4447,6 +4447,7 @@ AlterType(AlterTypeStmt *stmt)
 	/* OK, recursively update this type and any arrays/domains over it */
 	AlterTypeRecurse(typeOid, false, tup, catalog, &atparams);
 
+	/* transform the encoding clause and then get the typoptions from it */
 	if (encoding)
 	{
 		TypeName   *typname;

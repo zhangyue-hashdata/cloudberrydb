@@ -308,7 +308,7 @@ List* transfromColumnEncodingAocoRootPartition(List *colDefs, List *stenc, List 
 
 extern List *transformStorageEncodingClause(List *options, bool validate);
 extern List *form_default_storage_directive(List *enc);
-extern bool is_storage_encoding_directive(char *name);
+extern bool is_storage_encoding_directive(const char *name);
 
 extern relopt_value *
 parseRelOptions(Datum options, bool validate, relopt_kind kind, int *numrelopts);

@@ -1055,6 +1055,15 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	{
 		const TableAmRoutine *tam = GetTableAmRoutineByAmId(accessMethodId);
 
+		/*
+		 * Note that we disallow encoding clauses for unsupported tables
+		 * besides only one exception: if we're creating a partition as
+		 * part of a CREATE TABLE ... PARTITION BY ... command, ignore the
+		 * ENCODING options instead. The parent table might be AOCS, while
+		 * some of the partitions are not, or vice versa, so options can
+		 * make sense for some parts of the partition hierarchy, even if
+		 * it doesn't for this partition.
+		 */
 		stmt->attr_encodings = transformColumnEncoding(tam, /* TableAmRoutine */
 								NULL /* Relation */, 
 								schema,
