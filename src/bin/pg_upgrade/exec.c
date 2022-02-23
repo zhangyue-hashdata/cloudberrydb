@@ -14,6 +14,8 @@
 #include "common/string.h"
 #include "pg_upgrade.h"
 
+#include "greenplum/pg_upgrade_greenplum.h"
+
 static void check_data_dir(ClusterInfo *cluster);
 static void check_bin_dir(ClusterInfo *cluster, bool check_versions);
 static void get_bin_version(ClusterInfo *cluster);
@@ -262,8 +264,12 @@ verify_directories(void)
 
 	check_bin_dir(&old_cluster, false);
 	check_data_dir(&old_cluster);
-	check_bin_dir(&new_cluster, true);
-	check_data_dir(&new_cluster);
+
+	if(!is_skip_target_check())
+	{
+		check_bin_dir(&new_cluster, true);
+		check_data_dir(&new_cluster);
+	}
 }
 
 
