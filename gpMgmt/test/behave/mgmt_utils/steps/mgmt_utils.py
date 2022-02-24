@@ -385,25 +385,6 @@ def impl(context, content_ids):
                       remoteHost=seg.getSegmentHostName(), ctxt=REMOTE)
         cmd.run(validateAfter=True)
 
-@given('all files in pg_wal directory are deleted from datadirectory of content {content_ids} mirror')
-def impl(context, content_ids):
-    content_ids_to_delete_files = [int(c) for c in content_ids.split(',')]
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    segments = gparray.getDbList()
-    for seg in segments:
-        if seg.getSegmentRole() == ROLE_MIRROR and seg.content in content_ids_to_delete_files:
-            datadir = seg.getSegmentDataDirectory()
-            shutil.rmtree('{}/pg_wal/'.format(datadir))
-
-
-@given('all files in pg_wal directory are deleted from data directory of saved primary')
-def impl(context):
-    data_dir = context.pseg_data_dir
-    hostname = context.pseg_hostname
-    cmd = Command(name="Remove pg_wal files", cmdStr='rm -rf {}'.format(os.path.join(data_dir, 'pg_wal')),
-                  remoteHost=hostname, ctxt=REMOTE)
-    cmd.run(validateAfter=True)
-
 
 @given('the user {action} the walsender on the {segment} on content {content}')
 @when('the user {action} the walsender on the {segment} on content {content}')
@@ -914,35 +895,6 @@ def impl(context, command, called_command, num, args):
     if len(matches) != int(num):
         raise Exception("Expected %s to occur with %s args %s times. Found %d. \n %s"
                         % (called_command, args, num, len(matches), context.stdout_message))
-
-
-@then('check if gprecoverseg ran gpsegrecovery.py {num} times with the expected args')
-def impl(context, num):
-    gprecoverseg_output = context.stdout_message
-
-    era_cmd = "grep 'era =' {}/log/gp_era | sed 's/^.* // | tr -d '\n'".format(coordinator_data_dir)
-    run_command(context, era_cmd)
-    era = context.stdout_message
-
-    expected_command = "Running Command: $GPHOME/sbin/gpsegrecovery.py"
-    expected_args = "-l {} -v -b 64 --force-overwrite --era={}".format(_get_gpAdminLogs_directory(), era)
-    matches = lines_matching_both(gprecoverseg_output, expected_command, expected_args)
-
-    if len(matches) != int(num):
-        raise Exception("Expected gpsegrecovery.py to occur with %s args %s times. Found %d. \n %s"
-                        % (expected_args, num, len(matches), gprecoverseg_output))
-
-@then('check if gprecoverseg ran gpsegsetuprecovery.py {num} times with the expected args')
-def impl(context, num):
-    gprecoverseg_output = context.stdout_message
-
-    expected_command = "Running Command: $GPHOME/sbin/gpsegsetuprecovery.py"
-    expected_args = "-l {} -v -b 64 --force-overwrite".format(_get_gpAdminLogs_directory())
-    matches = lines_matching_both(gprecoverseg_output, expected_command, expected_args)
-
-    if len(matches) != int(num):
-        raise Exception("Expected gpsegrecovery.py to occur with %s args %s times. Found %d. \n %s"
-                        % (expected_args, num, len(matches), gprecoverseg_output))
 
 
 @then('{command} should only spawn up to {num} workers in WorkerPool')
@@ -1607,45 +1559,12 @@ def impl(context):
     return
 
 
-@then('the {segment_type} for content {content_ids} are up')
-def impl(context, segment_type, content_ids):
-    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
-    for content in content_ids.split(','):
-        if not is_segment_running(role, int(content)):
-            raise Exception("{} for content {} is not up".format(segment_type, content))
-
-    return
-
-@given('verify that mirror on content {content_ids} is {expected_status}')
-@when('verify that mirror on content {content_ids} is {expected_status}')
 @then('verify that mirror on content {content_ids} is {expected_status}')
 def impl(context, content_ids, expected_status):
     if content_ids == 'None':
         return
     if expected_status not in ('up', 'down'):
         raise Exception("expected_status can only be 'up' or 'down'")
-
-    for content in content_ids.split(','):
-        if expected_status == 'up' and not is_segment_running(ROLE_MIRROR, int(content)):
-            raise Exception("mirror for content {} is not up".format(content))
-        elif expected_status == 'down' and is_segment_running(ROLE_MIRROR, int(content)):
-            raise Exception("mirror for content {} is not down".format(content))
-
-    return
-
-
-@then('the user waits until mirror on content {content} is up')
-def impl(context, content):
-    query = "SELECT gp_request_fts_probe_scan(); SELECT status FROM gp_segment_configuration where role = 'm' and content = {};".format(content)
-    desired_result = 'u'
-    wait_for_desired_query_result(dbconn.DbURL(), query, desired_result)
-
-
-@given('the "{seg}" segment information is saved')
-@when('the "{seg}" segment information is saved')
-@then('the "{seg}" segment information is saved')
-def impl(context, seg):
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
 
     for content in content_ids.split(','):
         if expected_status == 'up' and not is_segment_running(ROLE_MIRROR, int(content)):
@@ -2712,19 +2631,7 @@ def impl(context, hosts):
                               remoteHost=host, ctxt=REMOTE)
         rm_cmd.run(validateAfter=True)
 
-@given('all files in "{dir}" directory are deleted on all hosts in the cluster')
-@then('all files in "{dir}" directory are deleted on all hosts in the cluster')
-def impl(context, dir):
-    host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
-    for host in host_list:
-        rm_cmd = Command(name="remove files in {}".format(dir),
-                         cmdStr="rm -rf {}/*".format(dir),
-                         remoteHost=host, ctxt=REMOTE)
-        rm_cmd.run(validateAfter=True)
-
 @given('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
-@when('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
-@then('all files in gpAdminLogs directory are deleted on all hosts in the cluster')
 def impl(context):
     host_list = GpArray.initFromCatalog(dbconn.DbURL()).getHostList()
     log_dir = _get_gpAdminLogs_directory()
