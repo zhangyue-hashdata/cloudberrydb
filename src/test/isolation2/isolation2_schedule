@@ -305,3 +305,5 @@ test: uao/ao_unique_index_vacuum_column
 test: local_directory_table_mixed
 test: stat_activity_extended
 test: sharedsnapshot
+# test pg_export_snapshot with distributed snapshot functionality
+test: export_distributed_snapshot
