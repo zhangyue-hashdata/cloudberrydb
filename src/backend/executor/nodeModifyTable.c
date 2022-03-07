@@ -2588,8 +2588,7 @@ ExecModifyTable(PlanState *pstate)
 		 * The above query will error out during parse-analyze so not reach here.
 		 * If reaching here, some bugs must happen.
 		 */
-		elog(LOG, "Reader Gang execute ModifyTable node, some bugs must happen");
-		Assert(0);
+		elog(ERROR, "Reader Gang execute ModifyTable node, some bugs must happen");
 	}
 
 	/*
