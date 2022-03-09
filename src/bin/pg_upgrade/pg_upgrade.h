@@ -553,7 +553,6 @@ void		pg_log(eLogType type, const char *fmt,...) pg_attribute_printf(2, 3);
 void		pg_fatal(const char *fmt,...) pg_attribute_printf(1, 2) pg_attribute_noreturn();
 void		end_progress_output(void);
 void		prep_status(const char *fmt,...) pg_attribute_printf(1, 2);
-void		check_ok(void);
 unsigned int str2uint(const char *str);
 uint64		str2uint64(const char *str);
 void		pg_putenv(const char *var, const char *val);
