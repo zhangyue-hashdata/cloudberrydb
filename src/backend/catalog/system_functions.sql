@@ -603,38 +603,6 @@ LANGUAGE internal
 STRICT IMMUTABLE PARALLEL SAFE
 AS 'unicode_is_normalized';
 
--- pg_tablespace_location wrapper functions to see Cloudberry cluster-wide tablespace locations
-CREATE FUNCTION gp_tablespace_segment_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)
-AS 'SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
-
-CREATE FUNCTION gp_tablespace_location (IN tblspc_oid oid, OUT gp_segment_id int, OUT tblspc_loc text)
-RETURNS SETOF RECORD
-AS
-  'SELECT * FROM pg_catalog.gp_tablespace_segment_location($1)
-   UNION ALL
-   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_tablespace_location($1)'
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
--- pg_switch_wal wrapper functions to switch WAL segment files on Cloudberry cluster-wide
-CREATE FUNCTION gp_switch_wal_on_all_segments (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-AS 'SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
-LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
-
-CREATE FUNCTION gp_switch_wal (OUT gp_segment_id int, OUT pg_switch_wal pg_lsn)
-RETURNS SETOF RECORD
-AS
-  'SELECT * FROM pg_catalog.gp_switch_wal_on_all_segments()
-   UNION ALL
-   SELECT pg_catalog.gp_execution_segment() as gp_segment_id, * FROM pg_catalog.pg_switch_wal()'
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal_on_all_segments() IS 'Switch WAL segment files on all primary segments';
-COMMENT ON FUNCTION pg_catalog.gp_switch_wal() IS 'Switch WAL segment files on all segments';
-
-REVOKE EXECUTE ON FUNCTION gp_switch_wal_on_all_segments() FROM public;
-REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
-
 
 -- GPDB_12_MERGE_FIXME: This seems out of place..
 -- GPDB_12_MERGE_FIXME: Shouldn't we have a wrapper like this for
@@ -645,6 +613,13 @@ $$
   select sum(n) from brin_summarize_new_values_internal(t) as n;
 $$
 LANGUAGE sql READS SQL DATA EXECUTE ON COORDINATOR;
+
+CREATE OR REPLACE FUNCTION brin_summarize_range(t regclass, block_number int8) returns setof bigint AS
+$$
+   -- brin_summarize_range_internal is marked as EXECUTE ON ALL SEGMENTS.
+   SELECT SUM(n.brin_summarize_range_internal) FROM (SELECT brin_summarize_range_internal(t, block_number)) AS n;
+$$
+LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
 
 
 --

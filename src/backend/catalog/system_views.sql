@@ -1524,40 +1524,6 @@ CREATE VIEW pg_stat_archiver AS
         s.stats_reset
     FROM pg_stat_get_archiver() s;
 
-CREATE OR REPLACE VIEW gp_stat_archiver AS
-    SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
-    UNION
-    SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
-
-CREATE OR REPLACE FUNCTION brin_summarize_range(t regclass, block_number int8) returns setof bigint AS
-$$
-   -- brin_summarize_range_internal is marked as EXECUTE ON ALL SEGMENTS.
-   SELECT SUM(n.brin_summarize_range_internal) FROM (SELECT brin_summarize_range_internal(t, block_number)) AS n;
-$$
-LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
-
-CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
-									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
-									  OUT port int, OUT username text, OUT state text,
-									  OUT endpointname text)
-RETURNS SETOF RECORD AS
-$$
-   SELECT * FROM pg_catalog.gp_get_endpoints()
-	WHERE sessionid = (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int4
-$$
-LANGUAGE SQL EXECUTE ON COORDINATOR;
-
-COMMENT ON FUNCTION pg_catalog.gp_get_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
-
-CREATE VIEW pg_catalog.gp_endpoints AS
-    SELECT * FROM pg_catalog.gp_get_endpoints();
-
-CREATE VIEW pg_catalog.gp_segment_endpoints AS
-    SELECT * FROM pg_catalog.gp_get_segment_endpoints();
-
-CREATE VIEW pg_catalog.gp_session_endpoints AS
-    SELECT * FROM pg_catalog.gp_get_session_endpoints();
-
 CREATE VIEW pg_stat_bgwriter AS
     SELECT
         pg_stat_get_bgwriter_timed_checkpoints() AS checkpoints_timed,
@@ -1776,6 +1742,35 @@ CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
 UNION ALL
   SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;
 
+
+CREATE OR REPLACE VIEW gp_stat_archiver AS
+    SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
+    UNION
+    SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
+
+CREATE FUNCTION gp_get_session_endpoints (OUT gp_segment_id int, OUT auth_token text,
+									  OUT cursorname text, OUT sessionid int, OUT hostname varchar(64),
+									  OUT port int, OUT username text, OUT state text,
+									  OUT endpointname text)
+RETURNS SETOF RECORD AS
+$$
+   SELECT * FROM pg_catalog.gp_get_endpoints()
+	WHERE sessionid = (SELECT setting FROM pg_settings WHERE name = 'gp_session_id')::int4
+$$
+LANGUAGE SQL EXECUTE ON COORDINATOR;
+
+COMMENT ON FUNCTION pg_catalog.gp_get_session_endpoints() IS 'All endpoints in this session that are visible to the current user.';
+
+CREATE VIEW pg_catalog.gp_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_endpoints();
+
+CREATE VIEW pg_catalog.gp_segment_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_segment_endpoints();
+
+CREATE VIEW pg_catalog.gp_session_endpoints AS
+    SELECT * FROM pg_catalog.gp_get_session_endpoints();
+
+-- CBDB: views for tag
 CREATE VIEW database_tag_descriptions AS
     SELECT
         tddatabaseid,
