@@ -6336,3 +6336,10 @@ disable_client_wait_timeout_interrupt(void)
 		DisableClientWaitTimeoutInterrupt();
 }
 
+/*
+ * Whether request on cancel or termination have arrived?
+ */
+inline bool
+CancelRequested() {
+	return InterruptPending && (ProcDiePending || QueryCancelPending);
+}
