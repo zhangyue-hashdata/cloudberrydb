@@ -82,7 +82,6 @@
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "utils/metrics_utils.h"
-#include "utils/faultinjector.h"
 
 typedef struct
 {
@@ -345,15 +344,6 @@ ExecCreateTableAs(ParseState *pstate, CreateTableAsStmt *stmt,
 	/* Check if the relation exists or not */
 	if (CreateTableAsRelExists(stmt))
 		return InvalidObjectAddress;
-
-#ifdef FAULT_INJECTOR
-	if (SIMPLE_FAULT_INJECTOR("change_string_guc") == FaultInjectorTypeSkip)
-	{
-		(void) set_config_option("search_path", "public",
-						 PGC_USERSET, PGC_S_SESSION,
-						 GUC_ACTION_SAVE, true, 0, false);
-	}
-#endif
 
 	/*
 	 * Create the tuple receiver object and insert info it will need
