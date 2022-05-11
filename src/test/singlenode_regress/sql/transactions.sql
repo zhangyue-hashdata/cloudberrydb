@@ -282,38 +282,50 @@ COMMIT;
 select * from xacttest;
 
 create or replace function max_xacttest() returns smallint language sql as
-'select max(a) from xacttest' stable;
+'select max(a) from xacttest' stable READS SQL DATA;
 
 begin;
-update xacttest set a = max_xacttest() + 10 where a > 0;
+update xacttest set a = (select max_xacttest()) + 10 where a > 0;
 select * from xacttest;
 rollback;
+
+-- start_ignore
+-- CBDB: The following test expects to evaluate max_xacttest() for each
+-- updated tuple. The result of max_xacttest() is updated every time
+-- when it's evaluated. So, it can't be run on QD process.
 
 -- But a volatile function can see the partial results of the calling query
 create or replace function max_xacttest() returns smallint language sql as
-'select max(a) from xacttest' volatile;
+'select max(a) from xacttest' volatile READS SQL DATA;
 
 begin;
 update xacttest set a = max_xacttest() + 10 where a > 0;
 select * from xacttest;
 rollback;
+-- end_ignore
 
 -- Now the same test with plpgsql (since it depends on SPI which is different)
 create or replace function max_xacttest() returns smallint language plpgsql as
-'begin return max(a) from xacttest; end' stable;
+'begin return max(a) from xacttest; end' stable READS SQL DATA;
 
 begin;
-update xacttest set a = max_xacttest() + 10 where a > 0;
+update xacttest set a = (select max_xacttest()) + 10 where a > 0;
 select * from xacttest;
 rollback;
+
+-- start_ignore
+-- CBDB: The following test expects to evaluate max_xacttest() for each
+-- updated tuple. The result of max_xacttest() is updated every time
+-- when it's evaluated. So, it can't be run on QD process.
 
 create or replace function max_xacttest() returns smallint language plpgsql as
-'begin return max(a) from xacttest; end' volatile;
+'begin return max(a) from xacttest; end' volatile READS SQL DATA;
 
 begin;
 update xacttest set a = max_xacttest() + 10 where a > 0;
 select * from xacttest;
 rollback;
+-- end_ignore
 
 
 -- test case for problems with dropping an open relation during abort

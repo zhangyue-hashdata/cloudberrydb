@@ -1598,6 +1598,8 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 		returnsSet = false;
 	}
 
+	validate_sql_exec_location(execLocation, returnsSet);
+
 	if (list_length(trftypes_list) > 0)
 	{
 		ListCell   *lc;
