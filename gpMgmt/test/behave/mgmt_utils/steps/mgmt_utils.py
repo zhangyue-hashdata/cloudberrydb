@@ -481,6 +481,13 @@ def impl(context, logdir):
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
 
+@then( 'verify if the gprecoverseg.lock directory is present in coordinator_data_directory')
+def impl(context):
+    gprecoverseg_lock_file = "%s/gprecoverseg.lock" % gp.get_coordinatordatadir()
+    if not os.path.exists(gprecoverseg_lock_file):
+        raise Exception('gprecoverseg.lock directory does not exist')
+    else:
+        return
 
 @then( 'verify if the gprecoverseg.lock directory is present in coordinator_data_directory')
 def impl(context):
@@ -662,6 +669,11 @@ def impl(context, process_name, signal_name):
         raise Exception("Unknown signal: {0}".format(signal_name))
 
     command = "ps ux | grep bin/{0} | awk '{{print $2}}' | xargs kill -{1}".format(process_name, sig.value)
+    run_async_command(context, command)
+
+@when('the user asynchronously sets up to end {process_name} process with SIGHUP')
+def impl(context, process_name):
+    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -9" % (process_name)
     run_async_command(context, command)
 
 @when('the user asynchronously sets up to end gpcreateseg process when it starts')
