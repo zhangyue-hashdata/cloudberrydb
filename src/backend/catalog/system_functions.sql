@@ -604,9 +604,6 @@ STRICT IMMUTABLE PARALLEL SAFE
 AS 'unicode_is_normalized';
 
 
--- GPDB_12_MERGE_FIXME: This seems out of place..
--- GPDB_12_MERGE_FIXME: Shouldn't we have a wrapper like this for
--- brin_summarize_range(), too?
 create or replace function brin_summarize_new_values(t regclass) returns setof bigint as
 $$
   -- brin_summarize_new_values_internal is marked as EXECUTE ON ALL SEGMENTS.
