@@ -1021,7 +1021,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		pos += resgroupInfo.len;
 	}
 
-	/* in-process variable for temporary namespace */
+	/* pass process local variables to QEs */
 	GetTempNamespaceState(&tempNamespaceId, &tempToastNamespaceId);
 	tempNamespaceId = htonl(tempNamespaceId);
 	tempToastNamespaceId = htonl(tempToastNamespaceId);
