@@ -100,8 +100,6 @@ static bool dosync = true;		/* Issue fsync() to make dump durable on disk. */
 /* START MPP ADDITION */
 bool		dumpGpPolicy;
 bool		isGPbackend;
-int			preDataSchemaOnly;	/* int because getopt_long() */
-int			postDataSchemaOnly;
 
 /* END MPP ADDITION */
 
@@ -554,8 +552,6 @@ main(int argc, char **argv)
 		 */
 		{"gp-syntax", no_argument, NULL, 1000},
 		{"no-gp-syntax", no_argument, NULL, 1001},
-		{"pre-data-schema-only", no_argument, &preDataSchemaOnly, 1},
-		{"post-data-schema-only", no_argument, &postDataSchemaOnly, 1},
 		{"function-oids", required_argument, NULL, 1002},
 		{"relation-oids", required_argument, NULL, 1003},
 		/* END MPP ADDITION */
@@ -572,7 +568,6 @@ main(int argc, char **argv)
 	 */
 	init_parallel_dump_utils();
 
-	preDataSchemaOnly = postDataSchemaOnly = false;
 	progname = get_progname(argv[0]);
 
 	if (argc > 1)
@@ -843,10 +838,6 @@ main(int argc, char **argv)
 	 */
 	if (dopt.binary_upgrade)
 		dopt.sequence_data = 1;
-
-	/* --pre-data-schema-only or --post-data-schema-only implies --schema-only */
-	if (preDataSchemaOnly || postDataSchemaOnly)
-		dopt.schemaOnly = true;
 
 	if (dopt.dataOnly && dopt.schemaOnly)
 	{
@@ -11355,45 +11346,36 @@ dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 	switch (dobj->objType)
 	{
 		case DO_NAMESPACE:
-			if (!postDataSchemaOnly)
 			dumpNamespace(fout, (const NamespaceInfo *) dobj);
 			break;
 		case DO_EXTENSION:
 			dumpExtension(fout, (const ExtensionInfo *) dobj);
 			break;
 		case DO_TYPE:
-			if (!postDataSchemaOnly)
 			dumpType(fout, (const TypeInfo *) dobj);
 			break;
 		case DO_TYPE_STORAGE_OPTIONS:
-			if (!postDataSchemaOnly)
-				dumpTypeStorageOptions(fout, (const TypeStorageOptions *) dobj);
+			dumpTypeStorageOptions(fout, (const TypeStorageOptions *) dobj);
 			break;
 		case DO_SHELL_TYPE:
-			if (!postDataSchemaOnly)
 			dumpShellType(fout, (const ShellTypeInfo *) dobj);
 			break;
 		case DO_FUNC:
-			if (!postDataSchemaOnly)
 			dumpFunc(fout, (const FuncInfo *) dobj);
 			break;
 		case DO_AGG:
-			if (!postDataSchemaOnly)
 			dumpAgg(fout, (const AggInfo *) dobj);
 			break;
 		case DO_EXTPROTOCOL:
-			if (!postDataSchemaOnly)
 			dumpExtProtocol(fout, (const ExtProtInfo *) dobj);
 			break;
 		case DO_OPERATOR:
-			if (!postDataSchemaOnly)
 			dumpOpr(fout, (const OprInfo *) dobj);
 			break;
 		case DO_ACCESS_METHOD:
 			dumpAccessMethod(fout, (const AccessMethodInfo *) dobj);
 			break;
 		case DO_OPCLASS:
-			if (!postDataSchemaOnly)
 			dumpOpclass(fout, (const OpclassInfo *) dobj);
 			break;
 		case DO_OPFAMILY:
@@ -11403,11 +11385,9 @@ dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 			dumpCollation(fout, (const CollInfo *) dobj);
 			break;
 		case DO_CONVERSION:
-			if (!postDataSchemaOnly)
 			dumpConversion(fout, (const ConvInfo *) dobj);
 			break;
 		case DO_TABLE:
-			if (!postDataSchemaOnly)
 			dumpTable(fout, (const TableInfo *) dobj);
 			break;
 		case DO_TABLE_ATTACH:
@@ -11415,11 +11395,9 @@ dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 			dumpTableAttach(fout, (const TableAttachInfo *) dobj);
 			break;
 		case DO_ATTRDEF:
-			if (!postDataSchemaOnly)
 			dumpAttrDef(fout, (const AttrDefInfo *) dobj);
 			break;
 		case DO_INDEX:
-			if (!preDataSchemaOnly)
 			dumpIndex(fout, (const IndxInfo *) dobj);
 			break;
 		case DO_INDEX_ATTACH:
@@ -11432,7 +11410,6 @@ dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 			refreshMatViewData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_RULE:
-			if (!preDataSchemaOnly)
 			dumpRule(fout, (const RuleInfo *) dobj);
 			break;
 		case DO_TRIGGER:
@@ -11442,30 +11419,24 @@ dumpDumpableObject(Archive *fout, const DumpableObject *dobj)
 			dumpEventTrigger(fout, (const EventTriggerInfo *) dobj);
 			break;
 		case DO_CONSTRAINT:
-			if (!preDataSchemaOnly)
 			dumpConstraint(fout, (const ConstraintInfo *) dobj);
 			break;
 		case DO_FK_CONSTRAINT:
-			if (!preDataSchemaOnly)
 			dumpConstraint(fout, (const ConstraintInfo *) dobj);
 			break;
 		case DO_PROCLANG:
-			if (!postDataSchemaOnly)
 			dumpProcLang(fout, (const ProcLangInfo *) dobj);
 			break;
 		case DO_CAST:
-			if (!postDataSchemaOnly)
 			dumpCast(fout, (const CastInfo *) dobj);
 			break;
 		case DO_TRANSFORM:
-			if (!postDataSchemaOnly)
 			dumpTransform(fout, (const TransformInfo *) dobj);
 			break;
 		case DO_SEQUENCE_SET:
 			dumpSequenceData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_TABLE_DATA:
-			if (!postDataSchemaOnly)
 			dumpTableData(fout, (const TableDataInfo *) dobj);
 			break;
 		case DO_DUMMY_TYPE:
