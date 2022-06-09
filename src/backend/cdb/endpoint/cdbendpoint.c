@@ -648,7 +648,7 @@ wait_receiver(void)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken: %m")));
 				abort_endpoint();
 				proc_exit(0);
 			}
@@ -804,7 +804,7 @@ wait_parallel_retrieve_close(void)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken: %m")));
 				proc_exit(0);
 			}
 		}
