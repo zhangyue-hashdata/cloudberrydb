@@ -529,7 +529,7 @@ sub init
 		print $conf "shared_buffers = 1MB\n";
 		print $conf "max_connections = 20\n";
 		# limit disk space consumption, too:
-		print $conf "max_wal_size = 128MB\n";
+		print $conf "max_wal_size = 512MB\n";
 
 	}
 	else
