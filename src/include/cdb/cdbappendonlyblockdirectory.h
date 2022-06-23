@@ -138,7 +138,7 @@ typedef struct AppendOnlyBlockDirectory
 }	AppendOnlyBlockDirectory;
 
 
-typedef struct CurrentBlock
+typedef struct AOFetchBlockMetadata
 {
 	/*
 	 * Current cached block directory entry.
@@ -161,16 +161,16 @@ typedef struct CurrentBlock
 	bool isLargeContent;
 	
 	bool		gotContents;
-} CurrentBlock;
+} AOFetchBlockMetadata;
 
-typedef struct CurrentSegmentFile
+typedef struct AOFetchSegmentFile
 {
 	bool isOpen;
 	
 	int num;
 	
 	int64 logicalEof;
-} CurrentSegmentFile;
+} AOFetchSegmentFile;
 
 typedef struct AppendOnlyBlockDirectorySeqScan {
 	AppendOnlyBlockDirectory blkdir;

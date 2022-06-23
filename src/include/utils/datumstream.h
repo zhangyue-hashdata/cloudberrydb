@@ -177,7 +177,7 @@ typedef struct DatumStreamFetchDescData
 {
 	DatumStreamRead *datumStream;
 
-	CurrentSegmentFile currentSegmentFile;
+	AOFetchSegmentFile currentSegmentFile;
 
 	int64		scanNextFileOffset;
 	int64		scanNextRowNum;
@@ -185,7 +185,7 @@ typedef struct DatumStreamFetchDescData
 	int64		scanAfterFileOffset;
 	int64		scanLastRowNum;
 
-	CurrentBlock currentBlock;
+	AOFetchBlockMetadata currentBlock;
 
 }	DatumStreamFetchDescData;
 

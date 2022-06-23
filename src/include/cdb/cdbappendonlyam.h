@@ -350,7 +350,7 @@ typedef struct AppendOnlyFetchDescData
 
 	AppendOnlyExecutorReadBlock executorReadBlock;
 
-	CurrentSegmentFile currentSegmentFile;
+	AOFetchSegmentFile currentSegmentFile;
 	
 	int64		scanNextFileOffset;
 	int64		scanNextRowNum;
@@ -358,7 +358,7 @@ typedef struct AppendOnlyFetchDescData
 	int64		scanAfterFileOffset;
 	int64		scanLastRowNum;
 
-	CurrentBlock currentBlock;
+	AOFetchBlockMetadata currentBlock;
 
 	int64	skipBlockCount;
 
