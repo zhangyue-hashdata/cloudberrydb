@@ -2894,6 +2894,8 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	RelOptInfo *sub_final_rel;
 	Relids		required_outer;
 	bool		is_shared;
+	Query           *subquery = NULL;
+	bool            contain_volatile_function = false;
 
 	/*
 	 * Find the referenced CTE based on the given range table entry
@@ -2920,6 +2922,12 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
 
 	Assert(IsA(cte->ctequery, Query));
+	/*
+	 * Copy query node since subquery_planner may trash it, and we need it
+	 * intact in case we need to create another plan for the CTE
+	 */
+	subquery = (Query *) copyObject(cte->ctequery);
+	contain_volatile_function = contain_volatile_functions((Node *) subquery);
 
 	/*
 	 * In PostgreSQL, we use the index to look up the plan ID in the
@@ -2978,7 +2986,8 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			is_shared = true;
 			break;
 		default:
-			is_shared =  root->config->gp_cte_sharing && cte->cterefcount > 1;
+			/* if plan sharing is enabled and contains volatile functions in the CTE query, also generate a shared scan plan */
+			is_shared =  root->config->gp_cte_sharing && (cte->cterefcount > 1 || contain_volatile_function);
 
 	}
 
@@ -2992,12 +3001,6 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	if (!is_shared)
 	{
 		PlannerConfig *config = CopyPlannerConfig(root->config);
-
-		/*
-		 * Copy query node since subquery_planner may trash it, and we need it
-		 * intact in case we need to create another plan for the CTE
-		 */
-		Query	   *subquery = (Query *) copyObject(cte->ctequery);
 
 		/*
 		 * Having multiple SharedScans can lead to deadlocks. For now,
@@ -3022,8 +3025,13 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 			/*
 			 * Push down quals, like we do in set_subquery_pathlist()
+			 *
+			 * If the subquery contains volatile functions, like we prevent inlining
+			 * when gp_cte_sharing is enables, we don't push down quals when gp_cte_sharing
+			 * is disabled either, as push down may cause wrong results.
 			 */
-			subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
+			if (!contain_volatile_function)
+				subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
 
 			subroot = subquery_planner(cteroot->glob, subquery, root,
 									   cte->cterecursive,
@@ -3051,12 +3059,6 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		if (cteplaninfo->subroot == NULL)
 		{
 			PlannerConfig *config = CopyPlannerConfig(root->config);
-
-			/*
-			 * Copy query node since subquery_planner may trash it and we need
-			 * it intact in case we need to create another plan for the CTE
-			 */
-			Query	   *subquery = (Query *) copyObject(cte->ctequery);
 
 			/*
 			 * Having multiple SharedScans can lead to deadlocks. For now,
