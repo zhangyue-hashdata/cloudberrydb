@@ -1317,7 +1317,7 @@ scanToFetchValue(AOCSFetchDesc aocsFetchDesc,
 {
 	DatumStreamFetchDesc 			datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[colno];
 	DatumStreamRead 				*datumStream = datumStreamFetchDesc->datumStream;
-	CurrentBlock 			*currentBlock = &datumStreamFetchDesc->currentBlock;
+	AOFetchBlockMetadata 			*currentBlock = &datumStreamFetchDesc->currentBlock;
 	AppendOnlyBlockDirectoryEntry 	*entry = &currentBlock->blockDirectoryEntry;
 	bool							found;
 

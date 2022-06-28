@@ -1938,7 +1938,7 @@ fetchFromCurrentBlock(AppendOnlyFetchDesc aoFetchDesc,
 					  TupleTableSlot *slot)
 {
 	bool							fetched;
-	CurrentBlock 					*currentBlock = &aoFetchDesc->currentBlock;
+	AOFetchBlockMetadata 			*currentBlock = &aoFetchDesc->currentBlock;
 	AppendOnlyExecutorReadBlock 	*executorReadBlock = &aoFetchDesc->executorReadBlock;
 	AppendOnlyBlockDirectoryEntry 	*entry = &currentBlock->blockDirectoryEntry;
 
