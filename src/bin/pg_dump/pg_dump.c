@@ -5371,6 +5371,14 @@ binary_upgrade_set_type_oids_by_rel_oid_impl(Archive *fout,
 	Oid			pg_type_oid;
 	Oid			pg_type_nsoid;
 	char	   *pg_type_name;
+	char       *co_table_check = "";
+
+	/*
+	 * Starting GPDB7 CO tables no longer have TOAST tables. Hence, ignore
+	 * toast OIDs for CO tables to avoid upgrade failures.
+	 */
+	if (fout->remoteVersion < 120000)
+		co_table_check = " AND c.relstorage <> 'c'";
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT c.reltype AS crel, "
@@ -5378,11 +5386,11 @@ binary_upgrade_set_type_oids_by_rel_oid_impl(Archive *fout,
 					  "       tt.typnamespace AS trelns "
 					  "FROM pg_catalog.pg_class c "
 					  "LEFT JOIN pg_catalog.pg_class t ON "
-					  " (c.reltoastrelid = t.oid AND c.relkind <> '%c') "
+					  "  (c.reltoastrelid = t.oid AND c.relkind <> '%c'%s) "
 					  "LEFT JOIN pg_catalog.pg_type ct ON (c.reltype = ct.oid) "
 					  "LEFT JOIN pg_catalog.pg_type tt ON (t.reltype = tt.oid) "
 					  "WHERE c.oid = '%u'::pg_catalog.oid;",
-					  RELKIND_PARTITIONED_TABLE, pg_rel_oid);
+					  RELKIND_PARTITIONED_TABLE, co_table_check, pg_rel_oid);
 
 	upgrade_res = ExecuteSqlQueryForSingleRow(fout, upgrade_query->data);
 
@@ -5575,9 +5583,23 @@ binary_upgrade_set_pg_class_oids_impl(Archive *fout,
 		/*
 		 * In a pre-v12 database, partitioned tables might be marked as having
 		 * toast tables, but we should ignore them if so.
+		*
+		 * One complexity is that the table definition might not require
+		 * the creation of a TOAST table, and the TOAST table might have
+		 * been created long after table creation, when the table was
+		 * loaded with wide data.  By setting the TOAST oid we force
+		 * creation of the TOAST heap and TOAST index by the backend so we
+		 * can cleanly copy the files during binary upgrade.
+		 *
+		 * GPDB: note that we compose the toast table name using the
+		 * relation OID, rather than using whatever name was in the old
+		 * cluster. Some operations can cause the old TOAST table name not
+		 * to match its owner's OID, but the new cluster will be using the
+		 * correct name, and it's the new cluster's name that we have to use
+		 * in preassignment.
 		 */
 		if (OidIsValid(pg_class_reltoastrelid) &&
-			pg_class_relkind != RELKIND_PARTITIONED_TABLE)
+			pg_class_relkind != RELKIND_PARTITIONED_TABLE && !ao_columnstore)
 		{
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT pg_catalog.binary_upgrade_set_next_toast_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$pg_toast_%u$$::text);\n",
@@ -7700,7 +7722,7 @@ getTables(Archive *fout, int *numTables)
 						  "d.classid = c.tableoid AND d.objid = c.oid AND "
 						  "d.objsubid = 0 AND "
 						  "d.refclassid = c.tableoid AND d.deptype = 'a') "
-						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid) "
+						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid AND c.relstorage <> 'c') "
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid "
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid "
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0)"
