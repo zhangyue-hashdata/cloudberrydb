@@ -1906,7 +1906,7 @@ build_exclude_list(void)
 
 	if (PQExpBufferDataBroken(buf))
 	{
-		pg_log_error("out of memory\n");
+		pg_log_error("out of memory");
 		exit(1);
 	}
 
