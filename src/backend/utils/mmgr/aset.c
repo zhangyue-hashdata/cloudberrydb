@@ -1681,8 +1681,8 @@ void
 AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 {
 	/*
-	* Mixing AllocSetContexts and other contexts parent will lose the accounting info.
-	*/
+	 * Mixing AllocSetContexts and other contexts will lose the accounting info.
+	 */
 	if (!IsA(context, AllocSetContext) || (new_parent != NULL && !IsA(new_parent, AllocSetContext)))
 		return;
 
