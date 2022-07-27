@@ -198,16 +198,6 @@ typedef struct _typeInfo
 	struct _constraintInfo *domChecks;
 } TypeInfo;
 
-typedef struct _typeCache
-{
-	DumpableObject dobj;
-
-	Oid			typnsp;
-
-	Oid			arraytypoid;
-	char	   *arraytypname;
-	Oid			arraytypnsp;
-} TypeCache;
 
 typedef struct _typeStorageOptions
 {
