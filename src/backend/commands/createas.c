@@ -346,8 +346,38 @@ ExecCreateTableAs(ParseState *pstate, CreateTableAsStmt *stmt,
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
 	/* Check if the relation exists or not */
-	if (CreateTableAsRelExists(stmt))
-		return InvalidObjectAddress;
+	{
+		Oid			nspid;
+		Oid			oldrelid;
+
+		nspid = RangeVarGetCreationNamespace(into->rel);
+
+		oldrelid = get_relname_relid(into->rel->relname, nspid);
+		if (OidIsValid(oldrelid))
+		{
+			if (!stmt->if_not_exists)
+				ereport(ERROR,
+					(errcode(ERRCODE_DUPLICATE_TABLE),
+					 errmsg("relation \"%s\" already exists",
+							into->rel->relname)));
+
+			/*
+			 * The relation exists and IF NOT EXISTS has been specified.
+			 *
+			 * If we are in an extension script, insist that the pre-existing
+			 * object be a member of the extension, to avoid security risks.
+			 */
+			ObjectAddressSet(address, RelationRelationId, oldrelid);
+			checkMembershipInCurrentExtension(&address);
+
+			/* OK to skip */
+			ereport(NOTICE,
+					(errcode(ERRCODE_DUPLICATE_TABLE),
+					 errmsg("relation \"%s\" already exists, skipping",
+							into->rel->relname)));
+			return InvalidObjectAddress;
+		}
+	}
 
 	/*
 	 * Create the tuple receiver object and insert info it will need
