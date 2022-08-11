@@ -440,7 +440,7 @@ INSERT INTO co2heap3 SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
 
 -- Prior-ATSETAM checks:
--- Check once that the AO tables have the custom reloptions
+-- Check once that the AO tables have the custom reloptions 
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the AO tables have relfrozenxid = 0
 SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
@@ -475,7 +475,7 @@ SELECT count(*) FROM co2heap3;
 SELECT count(*) FROM co2heap4;
 
 -- No AO aux tables should be left.
--- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
 SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap');

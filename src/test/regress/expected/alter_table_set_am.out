@@ -741,10 +741,10 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
  relname | attnum |                       attoptions                        
 ---------+--------+---------------------------------------------------------
- ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co   |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ ao2co   |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ ao2co2  |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ ao2co2  |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
  ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
  ao2co3  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
  ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
@@ -788,7 +788,7 @@ INSERT INTO co2heap2 SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO co2heap3 SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
 -- Prior-ATSETAM checks:
--- Check once that the AO tables have the custom reloptions
+-- Check once that the AO tables have the custom reloptions 
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
  relname  |            reloptions             
 ----------+-----------------------------------
@@ -869,7 +869,7 @@ SELECT count(*) FROM co2heap4;
 (1 row)
 
 -- No AO aux tables should be left.
--- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
 ERROR:  'co2heap' is not an append-only row relation
@@ -1278,10 +1278,10 @@ SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
  relname  | attnum |                     attoptions                      
 ----------+--------+-----------------------------------------------------
- heap2co  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- heap2co2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co  |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ heap2co  |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ heap2co2 |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ heap2co2 |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
  heap2co3 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
  heap2co3 |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
  heap2co4 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
