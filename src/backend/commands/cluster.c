@@ -908,7 +908,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 		ReleaseSysCache(tuple);
 	}
 
-	if (RelationIsAppendOptimized(OldHeap) || NewAccessMethod == AO_ROW_TABLE_AM_OID)
+	if (IsAccessMethodAO(NewAccessMethod))
 		NewRelationCreateAOAuxTables(OIDNewHeap, createAoBlockDirectory);
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);
