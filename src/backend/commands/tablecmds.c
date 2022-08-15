@@ -585,6 +585,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 
 static void checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
+static void remove_rel_opts(Relation rel);
 
 
 /* ----------------------------------------------------------------
@@ -6200,7 +6201,6 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab,
 			break;
 		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
 			/* Set reloptions if specified any. Otherwise handled specially in Phase 3. */
-			if (cmd->def)
 			{
 				bool aoopt_changed = false;
 
@@ -16126,7 +16126,14 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	if (defList == NIL && operation != AT_ReplaceRelOptions)
 		return;					/* nothing to do */
 
-	newAM = OidIsValid(newAccessMethod) ? GetTableAmRoutineByAmId(newAccessMethod) : NULL;
+
+	/* If we are changing access method, simply remove all the existing ones. */
+	if (OidIsValid(newAccessMethod))
+	{
+		newAM = GetTableAmRoutineByAmId(newAccessMethod);
+		remove_rel_opts(rel);
+	} else
+		newAM = NULL;
 
 	pgclass = table_open(RelationRelationId, RowExclusiveLock);
 
@@ -16136,14 +16143,11 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	if (operation == AT_ReplaceRelOptions || 
-		(newAccessMethod != InvalidOid && IsAccessMethodAO(rel->rd_rel->relam) != IsAccessMethodAO(newAccessMethod)))
+	if (operation == AT_ReplaceRelOptions)
 	{
 		/*
-		 * If we're supposed to replace the reloptions list, or if we're
-		 * changing AM between heap and AO/CO so the old reloptions won't 
-		 * apply to the new table anymore, we just pretend there were
-		 * none before.
+		 * If we're supposed to replace the reloptions list, we just 
+		 * pretend there were none before.
 		 */
 		datum = (Datum) 0;
 		isnull = true;
@@ -17996,6 +18000,39 @@ get_rel_opts(Relation rel)
 	ReleaseSysCache(optsTuple);
 
 	return newOptions;
+}
+
+/*
+ * GPDB: Convenience function to remove the pg_class.reloptions field for a given relation.
+ */
+static void
+remove_rel_opts(Relation rel)
+{
+	Datum           val[Natts_pg_class] = {0};
+	bool            null[Natts_pg_class] = {0};
+	bool            repl[Natts_pg_class] = {0};
+	Relation 	classrel;
+	HeapTuple 	tup;
+
+	classrel = table_open(RelationRelationId, RowExclusiveLock);
+
+	tup = SearchSysCacheCopy1(RELOID, RelationGetRelid(rel));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for relation %u", RelationGetRelid(rel));
+
+	val[Anum_pg_class_reloptions - 1] = (Datum) 0;
+	null[Anum_pg_class_reloptions - 1] = true;
+	repl[Anum_pg_class_reloptions - 1] = true;
+
+	tup = heap_modify_tuple(tup, RelationGetDescr(classrel),
+								val, null, repl);
+	CatalogTupleUpdate(classrel, &tup->t_self, tup);
+
+	heap_freetuple(tup);
+
+	table_close(classrel, RowExclusiveLock);
+
+	CommandCounterIncrement(); 
 }
 
 static RangeVar *
