@@ -16104,7 +16104,7 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
  *
  * GPDB specific arguments: 
  * 	aoopt_changed: whether any AO storage options have been changed in this function.
- * 	valid_as_ao: whether we validate teh reloptions as AO tables.
+ * 	newam: the new AM if we will change the table AM. It's InvalidOid if no change is needed.
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
@@ -16122,6 +16122,10 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	bool		repl_repl[Natts_pg_class];
 	const TableAmRoutine * newAM;
 	static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
+	Oid 		tableam;
+
+	/* Get the new table AM if applicable. Otherwise get the one from the reltion. */
+	tableam = (newam != InvalidOid) ? newam : rel->rd_rel->relam;
 
 	if (defList == NIL && operation != AT_ReplaceRelOptions)
 		return;					/* nothing to do */
