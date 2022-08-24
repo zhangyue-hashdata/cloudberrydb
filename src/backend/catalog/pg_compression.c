@@ -263,6 +263,7 @@ zlib_destructor(PG_FUNCTION_ARGS)
 	if (cs != NULL && cs->opaque != NULL)
  	{
 		pfree(cs->opaque);
+		cs->opaque = NULL;
 	}
 
 	PG_RETURN_VOID();
