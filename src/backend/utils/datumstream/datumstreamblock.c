@@ -4492,7 +4492,8 @@ DatumStreamBlockWrite_Finish(
 		dsw->null_bitmap_buffer = NULL;
 	}
 
-	if (dsw->datum_buffer != NULL) {
+	if (dsw->datum_buffer != NULL)
+	{
 		pfree(dsw->datum_buffer);
 		dsw->datum_buffer = NULL;
 	}
