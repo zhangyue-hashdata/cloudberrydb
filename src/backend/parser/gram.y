@@ -5077,6 +5077,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $12;
 					n->tablespacename = $13;
 					n->if_not_exists = false;
+					n->gp_style_alter_part = false;
 					n->distributedBy = (DistributedBy *) $14;
 					n->tags = $16;
 					n->relKind = RELKIND_RELATION;
@@ -5108,6 +5109,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $15;
 					n->tablespacename = $16;
 					n->if_not_exists = true;
+					n->gp_style_alter_part = false;
 					n->distributedBy = (DistributedBy *) $17;
 					n->tags = $19;
 					n->relKind = RELKIND_RELATION;
@@ -5140,6 +5142,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $11;
 					n->tablespacename = $12;
 					n->if_not_exists = false;
+					n->gp_style_alter_part = false;
 					n->distributedBy = (DistributedBy *) $13;
 					n->tags = $15;
 					n->relKind = RELKIND_RELATION;
@@ -5172,6 +5175,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $14;
 					n->tablespacename = $15;
 					n->if_not_exists = true;
+					n->gp_style_alter_part = false;
 					n->distributedBy = (DistributedBy *) $16;
 					n->tags = $18;
 					n->relKind = RELKIND_RELATION;
@@ -5204,6 +5208,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $13;
 					n->tablespacename = $14;
 					n->if_not_exists = false;
+					n->gp_style_alter_part = false;
 					n->distributedBy = NULL;
 					n->tags = $16;
 					n->relKind = RELKIND_RELATION;
@@ -5236,6 +5241,7 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					n->oncommit = $16;
 					n->tablespacename = $17;
 					n->if_not_exists = true;
+					n->gp_style_alter_part = false;
 					n->distributedBy = NULL;
 					n->tags = $19;
 					n->relKind = RELKIND_RELATION;

@@ -299,7 +299,7 @@ static void truncate_check_activity(Relation rel);
 static void RangeVarCallbackForTruncate(const RangeVar *relation,
 										Oid relId, Oid oldRelId, void *arg);
 static List *MergeAttributes(List *schema, List *supers, char relpersistence,
-							 bool is_partition, List **supconstr);
+							 bool is_partition, List **supconstr, bool gp_alter_part);
 static void MergeAttributesIntoExisting(Relation child_rel, Relation parent_rel);
 static bool MergeCheckConstraint(List *constraints, char *name, Node *expr);
 static void MergeConstraintsIntoExisting(Relation child_rel, Relation parent_rel);
@@ -1005,7 +1005,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 			MergeAttributes(schema, inheritOids,
 							stmt->relation->relpersistence,
 							stmt->partbound != NULL,
-							&old_constraints);
+							&old_constraints,
+							stmt->gp_style_alter_part);
 	}
 	else
 	{
@@ -2962,7 +2963,7 @@ storage_name(char c)
  */
 List *
 MergeAttributes(List *schema, List *supers, char relpersistence,
-				bool is_partition, List **supconstr)
+				bool is_partition, List **supconstr, bool gp_style_alter_part)
 {
 	List	   *inhSchema = NIL;
 	List	   *constraints = NIL;
@@ -3088,10 +3089,14 @@ MergeAttributes(List *schema, List *supers, char relpersistence,
 		 * Check for active uses of the parent partitioned table in the
 		 * current transaction, such as being used in some manner by an
 		 * enclosing command.
+		 *
+		 * GPDB-style ALTER TABLE ADD|SPLIT PARTITION can't meet this 
+		 * upstream expectation on QD. As during alter, reference is 
+		 * already held by alter command, and when we generate CREATE 
+		 * STMT and execute them we have 2 reference instead on 1 here.
 		 */
-		/* SINGLENODE_FIXME: check and enable partition operations */
-		if (is_partition && (Gp_role != GP_ROLE_DISPATCH && !IS_SINGLENODE()))
-			CheckTableNotInUse(relation, "CREATE TABLE .. PARTITION OF or ALTER TABLE ADD PARTITION"); 
+		if (is_partition && ((Gp_role != GP_ROLE_DISPATCH && !IS_SINGLENODE()) || !gp_style_alter_part))
+			CheckTableNotInUse(relation, "CREATE TABLE .. PARTITION OF");
 
 		/*
 		 * We do not allow partitioned tables and partitions to participate in
@@ -18160,6 +18165,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 		cs->ownerid = rel->rd_rel->relowner;
 		cs->tablespacename = get_tablespace_name(rel->rd_rel->reltablespace);
 		cs->buildAoBlkdir = false;
+		cs->gp_style_alter_part = false;
 
 		if (isTmpTableAo &&
 			rel->rd_rel->relhasindex)
