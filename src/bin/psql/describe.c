@@ -39,6 +39,7 @@ static bool describeOneTableDetails(const char *schemaname,
 									bool verbose);
 static void add_external_table_footer(printTableContent *const cont, const char *oid);
 static void add_distributed_by_footer(printTableContent *const cont, const char *oid);
+static void add_partition_by_footer(printTableContent *const cont, const char *oid);
 static void add_tablespace_footer(printTableContent *const cont, char relkind,
 								  Oid tablespace, const bool newline);
 static void add_role_attribute(PQExpBuffer buf, const char *const str);
@@ -4138,6 +4139,9 @@ describeOneTableDetails(const char *schemaname,
 		/* mpp addition start: dump distributed by clause */
 		add_distributed_by_footer(&cont, oid);
 
+		/* Still needed by legacy partitioning to print old version server's 'partition by' clause */
+		if (!isGPDB7000OrLater() && tuples > 0)
+			add_partition_by_footer(&cont, oid);
 
 		/* Tablespace info */
 		add_tablespace_footer(&cont, tableinfo.relkind, tableinfo.tablespace,
@@ -4626,6 +4630,87 @@ add_distributed_by_footer(printTableContent *const cont, const char *oid)
 	}
 }
 
+/*
+ * Add a 'partition by' description to the footer.
+ */
+static void
+add_partition_by_footer(printTableContent *const cont, const char *oid)
+{
+	PGresult   *result;
+	PQExpBufferData buf;
+	int			nRows;
+	int			nPartKey;
+
+	initPQExpBuffer(&buf);
+
+	/* check if current relation is root partition, if it is root partition, at least 1 row returns */
+	printfPQExpBuffer(&buf, "SELECT parrelid FROM pg_catalog.pg_partition WHERE parrelid = '%s'", oid);
+	result = PSQLexec(buf.data);
+
+	if (!result)
+		return;
+	nRows = PQntuples(result);
+
+	PQclear(result);
+
+	if (nRows)
+	{
+		/* query partition key on the root partition */
+		printfPQExpBuffer(&buf,
+			"WITH att_arr AS (SELECT unnest(paratts) \n"
+			"	FROM pg_catalog.pg_partition p \n"
+			"	WHERE p.parrelid = '%s' AND p.parlevel = 0 AND p.paristemplate = false), \n"
+			"idx_att AS (SELECT row_number() OVER() AS idx, unnest AS att_num FROM att_arr) \n"
+			"SELECT attname FROM pg_catalog.pg_attribute, idx_att \n"
+			"	WHERE attrelid='%s' AND attnum = att_num ORDER BY idx ",
+			oid, oid);
+	}
+	else
+	{
+		/* query partition key on the intermediate partition */
+		printfPQExpBuffer(&buf,
+			"WITH att_arr AS (SELECT unnest(paratts) FROM pg_catalog.pg_partition p, \n"
+			"	(SELECT parrelid, parlevel \n"
+			"		FROM pg_catalog.pg_partition p, pg_catalog.pg_partition_rule pr \n"
+			"		WHERE pr.parchildrelid='%s' AND p.oid = pr.paroid) AS v \n"
+			"	WHERE p.parrelid = v.parrelid AND p.parlevel = v.parlevel+1 AND p.paristemplate = false), \n"
+			"idx_att AS (SELECT row_number() OVER() AS idx, unnest AS att_num FROM att_arr) \n"
+			"SELECT attname FROM pg_catalog.pg_attribute, idx_att \n"
+			"	WHERE attrelid='%s' AND attnum = att_num ORDER BY idx ",
+			oid, oid);
+	}
+
+	result = PSQLexec(buf.data);
+	if (!result)
+		return;
+
+	nPartKey = PQntuples(result);
+	if (nPartKey)
+	{
+		char	   *partColName;
+		int			i;
+
+		resetPQExpBuffer(&buf);
+		appendPQExpBuffer(&buf, "Partition by: (");
+		for (i = 0; i < nPartKey; i++)
+		{
+			if (i > 0)
+				appendPQExpBuffer(&buf, ", ");
+			partColName = PQgetvalue(result, i, 0);
+
+			if (!partColName)
+				return;
+			appendPQExpBuffer(&buf, "%s", partColName);
+		}
+		appendPQExpBuffer(&buf, ")");
+		printTableAddFooter(cont, buf.data);
+	}
+
+	PQclear(result);
+
+	termPQExpBuffer(&buf);
+	return;		/* success */
+}
 
 /*
  * Add a tablespace description to a footer.  If 'newline' is true, it is added
