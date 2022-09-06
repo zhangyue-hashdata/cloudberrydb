@@ -77,7 +77,7 @@ static List *reparameterize_pathlist_by_child(PlannerInfo *root,
 											  List *pathlist,
 											  RelOptInfo *child_rel);
 
-static void set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
+static bool set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 					  List *pathkeys, int parallel_workers, bool parallel_aware);
 static CdbPathLocus
 adjust_modifytable_subpath(PlannerInfo *root, CmdType operation,
@@ -1476,7 +1476,8 @@ create_append_path(PlannerInfo *root,
 	else
 		pathnode->limit_tuples = -1.0;
 
-	set_append_path_locus(root, (Path *)pathnode, rel, NIL, parallel_workers, parallel_aware);
+	if (!set_append_path_locus(root, (Path *)pathnode, rel, NIL, parallel_workers, parallel_aware))
+		return NULL;
 
 	foreach(l, pathnode->subpaths)
 	{
@@ -1611,7 +1612,8 @@ create_merge_append_path(PlannerInfo *root,
 	 * Add Motions to the child nodes as needed, and determine the locus
 	 * of the MergeAppend itself.
 	 */
-	set_append_path_locus(root, (Path *) pathnode, rel, pathkeys, 0, false);
+	if (!set_append_path_locus(root, (Path *) pathnode, rel, pathkeys, 0, false))
+		return NULL;
 
 	/*
 	 * Add up the sizes and costs of the input paths.
@@ -1679,8 +1681,9 @@ create_merge_append_path(PlannerInfo *root,
  * Set the locus of an Append or MergeAppend path.
  *
  * This modifies the 'subpaths', costs fields, and locus of 'pathnode'.
+ * It will return false if fails to create motion for parameterized path.
  */
-static void
+static bool
 set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 					  List *pathkeys, int parallel_workers, bool parallel_aware)
 {
@@ -1712,7 +1715,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	if (!subpaths)
 	{
 		CdbPathLocus_MakeGeneral(&pathnode->locus);
-		return;
+		return true;
 	}
 
 	/*
@@ -2110,6 +2113,9 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 				subpath = cdbpath_create_motion_path(root, subpath, pathkeys, false, targetlocus);
 			else
 				subpath = cdbpath_create_motion_path(root, subpath, NIL, false, targetlocus);
+
+			if (subpath == NULL)
+				return false;
 		}
 
 		pathnode->sameslice_relids = bms_union(pathnode->sameslice_relids, subpath->sameslice_relids);
@@ -2159,6 +2165,8 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	pathnode->parallel_workers = targetlocus.parallel_workers;
 
 	*subpaths_out = new_subpaths;
+
+	return true;
 }
 
 /*
