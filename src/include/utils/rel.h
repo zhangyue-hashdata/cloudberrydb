@@ -429,8 +429,7 @@ typedef struct ViewOptions
  *		eval of argument!
  */
 #define RelationIsSecurityView(relation)									\
-	(AssertMacro(relation->rd_rel->relkind == RELKIND_VIEW),				\
-	 (relation)->rd_options ?												\
+	((relation)->rd_options ?												\
 	  ((ViewOptions *) (relation)->rd_options)->security_barrier : false)
 
 /*
