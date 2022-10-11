@@ -3131,3 +3131,21 @@ create index float2double_table_idx_c1c2c3 on float2double_table(c1,c2,c3);
 create unique index float2double_table_uniqidx_c1c2c3 on float2double_table(c1,c2,c3);
 ALTER TABLE float2double_table ALTER COLUMN c1 TYPE double precision;
 DROP TABLE float2double_table;
+-- Test that altering owner of partition root should recurse into the child tables.
+create role atown_r1;
+create role atown_r2 in role atown_r1;
+set role atown_r2;
+create table atown_part(a int, b int) partition by range(a) (partition p1 start (1) end (100));
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+alter table atown_part owner to atown_r1;
+alter table atown_part add partition start(100) end(200);
+-- both existing and new child tables should have the new owner
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+-- should only alter the partition root with ONLY keyword
+alter table only atown_part owner to atown_r2;
+select c.relname, r.rolname from pg_class c join pg_roles r on c.relowner = r.oid where relname like 'atown_part%';
+
+drop table atown_part;
+reset role;
+drop role atown_r1;
+drop role atown_r2;
