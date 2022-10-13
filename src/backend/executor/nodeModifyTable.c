@@ -3133,6 +3133,24 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		 * Verify result relation is a valid target for the current operation
 		 */
 		CheckValidResultRel(resultRelInfo, operation, mtstate);
+		/*
+		 * GPDB: We don't support SERIALIZABLE transaction isolation for
+		 * UPDATES/DELETES on AO/CO tables.
+		 */
+		if (IsolationUsesXactSnapshot() &&
+			RelationIsAppendOptimized(resultRelInfo->ri_RelationDesc))
+		{
+			if (operation == CMD_UPDATE)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("updates on append-only tables are not "
+								   "supported in serializable transactions")));
+			else if (operation == CMD_DELETE)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("deletes on append-only tables are not "
+								   "supported in serializable transactions")));
+		}
 
 		if (RelationIsAoRows(resultRelInfo->ri_RelationDesc))
 			appendonly_dml_init(resultRelInfo->ri_RelationDesc, operation);
