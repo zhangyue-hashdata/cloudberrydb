@@ -1871,30 +1871,16 @@ AlterDatabase(ParseState *pstate, AlterDatabaseStmt *stmt, bool isTopLevel)
 								 dboid,
 								 stmt->dbname);
 		}
+	}
 
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			CdbDispatchUtilityStatement((Node *) stmt,
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
 										DF_CANCEL_ON_ERROR|
 										DF_WITH_SNAPSHOT|
 										DF_NEED_TWO_PHASE,
 										GetAssignedOidsForDispatch(),
 										NULL);
-		}
-	}
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		char	   *cmd;
-
-		cmd = psprintf("ALTER DATABASE %s CONNECTION LIMIT %d",
-					   quote_identifier(stmt->dbname), dbconnlimit);
-
-		CdbDispatchCommand(cmd,
-						   DF_NEED_TWO_PHASE|
-						   DF_WITH_SNAPSHOT,
-						   NULL);
-		pfree(cmd);
 	}
 	return dboid;
 }

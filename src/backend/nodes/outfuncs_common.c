@@ -1772,7 +1772,7 @@ _outEphemeralNamedRelationInfo(StringInfo str, const EphemeralNamedRelationInfo 
 static void
 _outAlterDatabaseStmt(StringInfo str, const AlterDatabaseStmt *node)
 {
-	WRITE_NODE_TYPE("AlterDatabaseStmt");
+	WRITE_NODE_TYPE("ALTERDATABASESTMT");
 	WRITE_STRING_FIELD(dbname);
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(tags);

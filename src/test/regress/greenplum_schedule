@@ -371,5 +371,6 @@ test: enum_dist_part_ban
 
 # run pg_hba raleted testing
 test: hba_conf
+test: dboptions
 
 # end of tests
