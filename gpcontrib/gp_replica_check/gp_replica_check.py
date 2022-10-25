@@ -54,9 +54,9 @@ class ReplicaCheck(threading.Thread):
         self.lock = threading.Lock()
 
     def __str__(self):
-        return '(%s) Host: %s, Port: %s, Database: %s\n\
-Primary Data Directory Location: %s\n\
-Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, self.datname,
+        return '\n(%s) ---------\nHost: %s, Port: %s, Database: %s\n\
+Primary Location: %s\n\
+Mirror  Location: %s' % (self.getName(), self.host, self.port, self.datname,
                                           self.ploc, self.mloc)
 
     def wait_for_wal_sync(self):
@@ -102,7 +102,7 @@ Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, sel
 
 
     def run(self):
-        self.wait_for_wal_sync();
+        self.wait_for_wal_sync()
         cmd = '''PGOPTIONS='-c gp_role=utility' psql -h %s -p %s -c "select * from gp_replica_check('%s', '%s', '%s')" %s''' % (self.host, self.port,
                                                                                                                                         self.ploc, self.mloc,
                                                                                                                                         self.relation_types,
@@ -115,11 +115,12 @@ Mirror Data Directory Location: %s' % (self.getName(), self.host, self.port, sel
                 self.result = True if res.strip().split('\n')[-2].strip() == 't' else False
                 with self.lock:
                     print(self)
-                    print (res)
-                    if not self.result:
-                        print("replica check failed")
-
-            except subprocess.CalledProcessError as e:
+                    if self.result:
+                        print("(%s) ** passed **" % (self.getName()))
+                    else:
+                        print("(%s) --> failed <--" % (self.getName()))
+                        print (res)
+            except:
                 with self.lock:
                     print(self)
                     print('returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output))
