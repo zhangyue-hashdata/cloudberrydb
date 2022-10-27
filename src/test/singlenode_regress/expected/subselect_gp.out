@@ -1512,12 +1512,12 @@ EXPLAIN select count(*) from
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=410.03..410.04 rows=1 width=8)
-   ->  Hash Join  (cost=197.53..409.78 rows=100 width=0)
+ Aggregate  (cost=410.15..410.16 rows=1 width=8)
+   ->  Hash Join  (cost=197.53..409.90 rows=100 width=0)
          Hash Cond: (a.unique1 = b.hundred)
          ->  Seq Scan on tenk1 a  (cost=0.00..185.00 rows=10000 width=4)
          ->  Hash  (cost=196.28..196.28 rows=100 width=4)
-               ->  Unique  (cost=0.29..195.28 rows=100 width=4)
+               ->  HashAggregate  (cost=195.28..196.28 rows=100 width=4)
                      Group Key: b.hundred
                      ->  Index Only Scan using tenk1_hundred on tenk1 b  (cost=0.29..170.28 rows=10000 width=4)
  Optimizer: Postgres query optimizer
@@ -1528,12 +1528,12 @@ EXPLAIN select count(distinct ss.ten) from
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=410.03..410.04 rows=1 width=8)
-   ->  Hash Join  (cost=197.53..409.78 rows=100 width=4)
+ Aggregate  (cost=410.15..410.16 rows=1 width=8)
+   ->  Hash Join  (cost=197.53..409.90 rows=100 width=4)
          Hash Cond: (a.unique1 = b.hundred)
          ->  Seq Scan on tenk1 a  (cost=0.00..185.00 rows=10000 width=8)
          ->  Hash  (cost=196.28..196.28 rows=100 width=4)
-               ->  Unique  (cost=0.29..195.28 rows=100 width=4)
+               ->  HashAggregate  (cost=195.28..196.28 rows=100 width=4)
                      Group Key: b.hundred
                      ->  Index Only Scan using tenk1_hundred on tenk1 b  (cost=0.29..170.28 rows=10000 width=4)
  Optimizer: Postgres query optimizer
@@ -2187,7 +2187,7 @@ select * from foo left outer join baz on (select bar.i from bar where bar.i = fo
                        Output: bar.i
                        Filter: (bar.i = foo.i)
  Optimizer: Postgres query optimizer
-(15 rows)
+(14 rows)
 
 select * from foo left outer join baz on (select bar.i from bar where bar.i = foo.i) + 1  = baz.j;
  i  | j  | i | j 
@@ -2230,7 +2230,7 @@ select * from foo where
          ->  Seq Scan on subselect_gp.baz b
                Output: b.i
  Optimizer: Postgres query optimizer
-(14 rows)
+(13 rows)
 
 select * from foo where
   (case when foo.i in (select a.i from baz a) then foo.i else null end) in
