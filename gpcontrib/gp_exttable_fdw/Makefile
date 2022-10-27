@@ -8,7 +8,6 @@ OBJS = gp_exttable_fdw.o extaccess.o
 EXTENSION = gp_exttable_fdw
 DATA = gp_exttable_fdw--1.0.sql
 
-HEADERS = extaccess.h
 REGRESS =
 
 HEADERS = extaccess.h
