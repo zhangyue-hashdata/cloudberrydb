@@ -11,6 +11,8 @@ DATA = gp_exttable_fdw--1.0.sql
 HEADERS = extaccess.h
 REGRESS =
 
+HEADERS = extaccess.h
+
 ifdef USE_PGXS
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
