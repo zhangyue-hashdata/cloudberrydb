@@ -122,23 +122,16 @@ static void reset_state_cb(void *arg);
  *		a memory context that should be long lived enough and is
  *			responsible for reseting the state via its reset cb
  */
-static struct AOCOLocal
+typedef struct AOCODMLStates
 {
 	AOCODMLState           *last_used_state;
-	HTAB				   *dmlDescriptorTab;
+	HTAB				   *state_table;
 
 	MemoryContext			stateCxt;
 	MemoryContextCallback	cb;
-} aocoLocal = {
-	.last_used_state  = NULL,
-	.dmlDescriptorTab = NULL,
+} AOCODMLStates;
 
-	.stateCxt		  = NULL,
-	.cb				  = {
-		.func	= reset_state_cb,
-		.arg	= NULL
-	},
-};
+static AOCODMLStates aocoDMLStates;
 
 /*
  * There are two cases that we are called from, during context destruction
@@ -150,32 +143,42 @@ static struct AOCOLocal
 static void
 reset_state_cb(void *arg)
 {
-	aocoLocal.dmlDescriptorTab = NULL;
-	aocoLocal.last_used_state = NULL;
-	aocoLocal.stateCxt = NULL;
+	aocoDMLStates.state_table = NULL;
+	aocoDMLStates.last_used_state = NULL;
+	aocoDMLStates.stateCxt = NULL;
 }
 
+
+/*
+ * Initialize the backend local AOCODMLStates object for this backend for the
+ * current DML or DML-like command (if not already initialized).
+ *
+ * This function should be called with a current memory context whose life
+ * span is enough to last until the end of this command execution.
+ */
 static void
-init_dml_local_state(void)
+init_aoco_dml_states()
 {
 	HASHCTL hash_ctl;
 
-	if (!aocoLocal.dmlDescriptorTab)
+	if (!aocoDMLStates.state_table)
 	{
-		Assert(aocoLocal.stateCxt == NULL);
-		aocoLocal.stateCxt = AllocSetContextCreate(
+		Assert(aocoDMLStates.stateCxt == NULL);
+		aocoDMLStates.stateCxt = AllocSetContextCreate(
 			CurrentMemoryContext,
 			"AppendOnly DML State Context",
 			ALLOCSET_SMALL_SIZES);
-		MemoryContextRegisterResetCallback(
-			aocoLocal.stateCxt,
-			&aocoLocal.cb);
+
+		aocoDMLStates.cb.func = reset_state_cb;
+		aocoDMLStates.cb.arg = NULL;
+		MemoryContextRegisterResetCallback(aocoDMLStates.stateCxt,
+										   &aocoDMLStates.cb);
 
 		memset(&hash_ctl, 0, sizeof(hash_ctl));
 		hash_ctl.keysize = sizeof(Oid);
 		hash_ctl.entrysize = sizeof(AOCODMLState);
-		hash_ctl.hcxt = aocoLocal.stateCxt;
-		aocoLocal.dmlDescriptorTab =
+		hash_ctl.hcxt = aocoDMLStates.stateCxt;
+		aocoDMLStates.state_table =
 			hash_create("AppendOnly DML state", 128, &hash_ctl,
 			            HASH_CONTEXT | HASH_ELEM | HASH_BLOBS);
 	}
@@ -187,19 +190,18 @@ init_dml_local_state(void)
  *
  * Should be called exactly once per relation.
  */
-static inline AOCODMLState *
-enter_dml_state(const Oid relationOid)
+static inline void
+init_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
 	bool				found;
 
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_ENTER,
-		&found);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_ENTER,
+										 &found);
 
 	state->insertDesc = NULL;
 	state->deleteDesc = NULL;
@@ -210,8 +212,7 @@ enter_dml_state(const Oid relationOid)
 
 	Assert(!found);
 
-	aocoLocal.last_used_state = state;
-	return state;
+	aocoDMLStates.last_used_state = state;
 }
 
 /*
@@ -222,21 +223,20 @@ static inline AOCODMLState *
 find_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	if (aocoLocal.last_used_state &&
-		aocoLocal.last_used_state->relationOid == relationOid)
-		return aocoLocal.last_used_state;
+	if (aocoDMLStates.last_used_state &&
+		aocoDMLStates.last_used_state->relationOid == relationOid)
+		return aocoDMLStates.last_used_state;
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_FIND,
-		NULL);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_FIND,
+										 NULL);
 
 	Assert(state);
 
-	aocoLocal.last_used_state = state;
+	aocoDMLStates.last_used_state = state;
 	return state;
 }
 
@@ -250,20 +250,19 @@ static inline AOCODMLState *
 remove_dml_state(const Oid relationOid)
 {
 	AOCODMLState *state;
-	Assert(aocoLocal.dmlDescriptorTab);
+	Assert(aocoDMLStates.state_table);
 
-	state = (AOCODMLState *) hash_search(
-		aocoLocal.dmlDescriptorTab,
-		&relationOid,
-		HASH_REMOVE,
-		NULL);
+	state = (AOCODMLState *) hash_search(aocoDMLStates.state_table,
+										 &relationOid,
+										 HASH_REMOVE,
+										 NULL);
 
 	if (!state)
 		return NULL;
 
-	if (aocoLocal.last_used_state &&
-		aocoLocal.last_used_state->relationOid == relationOid)
-		aocoLocal.last_used_state = NULL;
+	if (aocoDMLStates.last_used_state &&
+		aocoDMLStates.last_used_state->relationOid == relationOid)
+		aocoDMLStates.last_used_state = NULL;
 
 	return state;
 }
@@ -277,8 +276,8 @@ remove_dml_state(const Oid relationOid)
 void
 aoco_dml_init(Relation relation, CmdType operation)
 {
-	init_dml_local_state();
-	(void) enter_dml_state(RelationGetRelid(relation));
+	init_aoco_dml_states();
+	init_dml_state(RelationGetRelid(relation));
 }
 
 /*
@@ -372,7 +371,7 @@ get_insert_descriptor(const Relation relation)
 	MemoryContext oldcxt;
 
 	state = find_dml_state(RelationGetRelid(relation));
-	oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
+	oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 	if (state->insertDesc == NULL)
 	{
 
@@ -490,7 +489,7 @@ get_delete_descriptor(const Relation relation, bool forUpdate)
 						 errmsg("deletes on append-only tables are not supported in serializable transactions")));
 		}
 
-		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 		state->deleteDesc = aocs_delete_init(relation);
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -508,7 +507,7 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 		MemoryContext oldcxt;
 		AOCSUniqueCheckDesc uniqueCheckDesc;
 
-		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
+		oldcxt = MemoryContextSwitchTo(aocoDMLStates.stateCxt);
 		uniqueCheckDesc = palloc0(sizeof(AOCSUniqueCheckDescData));
 
 		/* Initialize the block directory */
