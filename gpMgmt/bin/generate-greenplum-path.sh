@@ -49,4 +49,15 @@ export LD_LIBRARY_PATH
 export OPENSSL_CONF
 export JAVA_HOME
 export CLASSPATH
+
+# Load the external environment variable files
+if [ -d "${GPHOME}/etc/environment.d" ]; then
+	LOGGER=$(which logger 2> /dev/null || which true)
+	set -o allexport
+	for env in $(find "${GPHOME}/etc/environment.d" -regextype sed -regex '.*/[0-9][0-9]-*.\.conf$' -type f | sort -n); do
+		$LOGGER -t "greenplum-path.sh" "loading environment from ${env}"
+		source "${env}"
+	done
+	set +o allexport
+fi
 EOF
