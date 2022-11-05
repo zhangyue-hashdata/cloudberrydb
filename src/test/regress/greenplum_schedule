@@ -236,7 +236,7 @@ test: uao_ddl/gp_partition_tables_column uao_ddl/gp_partition_tables_row
 # These tests use gp_select_invisible and VACUUM, and will get confused if there are
 # concurrent transactions holding back the global xmin.
 
-test: uao_dml/uao_dml_cursor_row uao_dml/uao_dml_select_row uao_dml/uao_dml_cursor_column uao_dml/uao_dml_select_column uao_dml/uao_dml_unique_index_delete_row uao_dml/uao_dml_unique_index_delete_column uao_dml/uao_dml_unique_index_update_row uao_dml/uao_dml_unique_index_update_column
+test: uao_dml/uao_dml_cursor_row uao_dml/uao_dml_select_row uao_dml/uao_dml_cursor_column uao_dml/uao_dml_select_column
 
 # test ao partition unique index update
 test: ao_unique_index_partition
@@ -347,5 +347,8 @@ test: dynamic_table
 # run this at the end of the schedule for more chance to catch abnormalities
 # different CI env with GPDB
 # test: gp_check_files
+
+# DML tests for AO/CO unique indexes.
+test: uao_dml/uao_dml_unique_index_delete_row uao_dml/uao_dml_unique_index_delete_column uao_dml/uao_dml_unique_index_update_row uao_dml/uao_dml_unique_index_update_column
 
 # end of tests
