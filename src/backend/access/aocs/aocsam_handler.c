@@ -1696,8 +1696,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
-	bool		need_unregister_snapshot = false;
-	TransactionId OldestXmin;
 	AOCSFileSegInfo **seginfo = NULL;
 	int32 segfile_count;
 	int64 total_blockcount = 0; 
@@ -1743,34 +1741,15 @@ aoco_index_build_range_scan(Relation heapRelation,
 	/* Set up execution state for predicate, if any. */
 	predicate = ExecPrepareQual(indexInfo->ii_Predicate, estate);
 
-	/*
-	 * Prepare for scan of the base relation.  In a normal index build, we use
-	 * SnapshotAny because we must retrieve all tuples and do our own time
-	 * qual checks (because we have to index RECENTLY_DEAD tuples). In a
-	 * concurrent build, or during bootstrap, we take a regular MVCC snapshot
-	 * and index whatever's live according to that.
-	 */
-	OldestXmin = InvalidTransactionId;
-
-	/* okay to ignore lazy VACUUMs here */
-	if (!IsBootstrapProcessingMode() && !indexInfo->ii_Concurrent)
-		OldestXmin = GetOldestNonRemovableTransactionId(heapRelation);
-
 	if (!scan)
 	{
 		/*
 		 * Serial index build.
 		 *
-		 * Must begin our own heap scan in this case.  We may also need to
-		 * register a snapshot whose lifetime is under our direct control.
+		 * XXX: We always use SnapshotAny here. An MVCC snapshot and oldest xmin
+		 * calculation is necessary to support indexes built CONCURRENTLY.
 		 */
-		if (!TransactionIdIsValid(OldestXmin))
-		{
-			snapshot = RegisterSnapshot(GetTransactionSnapshot());
-			need_unregister_snapshot = true;
-		}
-		else
-			snapshot = SnapshotAny;
+		snapshot = SnapshotAny;
 
 		scan = table_beginscan_strat(heapRelation,	/* relation */
 		                             snapshot,	/* snapshot */
@@ -1863,23 +1842,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 		pgstat_progress_update_param(PROGRESS_SCAN_BLOCKS_TOTAL,
 									total_blockcount);
 	}
-
-
-	/*
-	* GPDB_14_MERGE_FIXME
-	* Same as in appendonly_handler.c:
-	* Need to check the comments here as GetOldestXmin() has been removed.
-	*/
-	/*
-	 * Must call GetOldestXmin() with SnapshotAny.  Should never call
-	 * GetOldestXmin() with MVCC snapshot. (It's especially worth checking
-	 * this for parallel builds, since ambuild routines that support parallel
-	 * builds must work these details out for themselves.)
-	 */
-	Assert(snapshot == SnapshotAny || IsMVCCSnapshot(snapshot));
-	Assert(snapshot == SnapshotAny ? TransactionIdIsValid(OldestXmin) :
-	       !TransactionIdIsValid(OldestXmin));
-	Assert(snapshot == SnapshotAny || !anyvisible);
 
 	/* set our scan endpoints */
 	if (!allow_sync)
@@ -2005,10 +1967,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 	table_endscan(scan);
-
-	/* we can now forget our snapshot, if set and registered by us */
-	if (need_unregister_snapshot)
-		UnregisterSnapshot(snapshot);
 
 	ExecDropSingleTupleTableSlot(slot);
 
