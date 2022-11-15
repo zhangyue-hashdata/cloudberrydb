@@ -1393,20 +1393,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 			if (relform1->reltoastrelid && relform2->reltoastrelid)
 			{
 				/* Recursively swap the contents of the toast tables */
-#ifdef USE_ASSERT_CHECKING
-				/*
-				 * CLUSTER operation on append-optimized tables does not
-				 * compute freeze limit (frozenXid) because AO tables do not
-				 * have relfrozenxid.  The toast tables need to keep existing
-				 * relfrozenxid value unchanged in this case.
-				 *
-				 * assert, if the frozenXid is invalid, it must be AO table.
-				 */
-				bool isAO1 = (relform1->relam == AO_ROW_TABLE_AM_OID);
-				bool isAO2 = (relform2->relam == AO_ROW_TABLE_AM_OID);
-				if (!TransactionIdIsNormal(frozenXid))
-					Assert(isAO1 && isAO2);	
-#endif
 				swap_relation_files(relform1->reltoastrelid,
 									relform2->reltoastrelid,
 									target_is_pg_class,
@@ -1452,6 +1438,24 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 								  "TOAST");
 		}
 	}
+
+#ifdef USE_ASSERT_CHECKING
+		/* 
+		 * Check with assert if AO table's toast table kept existing relfrozenxid unchanged.
+		 * 
+		 * CLUSTER operation on append-optimized tables does not
+		 * compute freeze limit (frozenXid) because AO tables do not
+		 * have relfrozenxid.  The toast tables need to keep existing
+		 * relfrozenxid value unchanged in this case.
+		*/
+		if (swap_toast_by_content 
+			&& frozenXid == InvalidTransactionId 
+			&& relform1->relkind == RELKIND_TOASTVALUE 
+			&& relform2->relkind == RELKIND_TOASTVALUE)
+		{
+			Assert(relform1->relfrozenxid == relform2->relfrozenxid);
+		}
+#endif
 
 	/*
 	 * If we're swapping two toast tables by content, do the same for their
