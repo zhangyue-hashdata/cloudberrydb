@@ -957,7 +957,7 @@ static void LocalSetXLogInsertAllowed(void);
 static void CreateEndOfRecoveryRecord(void);
 static XLogRecPtr CreateOverwriteContrecordRecord(XLogRecPtr aborted_lsn);
 static void CheckPointGuts(XLogRecPtr checkPointRedo, int flags);
-static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr);
+static void KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo);
 static XLogRecPtr XLogGetReplicationSlotMinimumLSN(void);
 
 static void AdvanceXLInsertBuffer(XLogRecPtr upto, bool opportunistic);
@@ -9908,7 +9908,7 @@ CreateCheckPoint(int flags)
 	 * prevent the disk holding the xlog from growing full.
 	 */
 	XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
-	KeepLogSeg(recptr, &_logSegNo, PriorRedoPtr);
+	KeepLogSeg(recptr, &_logSegNo);
 	if (InvalidateObsoleteReplicationSlots(_logSegNo))
 	{
 		/*
@@ -9916,7 +9916,7 @@ CreateCheckPoint(int flags)
 		 * horizon, starting again from RedoRecPtr.
 		 */
 		XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
-		KeepLogSeg(recptr, &_logSegNo, PriorRedoPtr);
+		KeepLogSeg(recptr, &_logSegNo);
 	}
 	_logSegNo--;
 	RemoveOldXlogFiles(_logSegNo, RedoRecPtr, recptr);
@@ -10320,7 +10320,7 @@ CreateRestartPoint(int flags)
 	receivePtr = GetWalRcvFlushRecPtr(NULL, NULL);
 	replayPtr = GetXLogReplayRecPtr(&replayTLI);
 	endptr = (receivePtr < replayPtr) ? replayPtr : receivePtr;
-	KeepLogSeg(endptr, &_logSegNo, InvalidXLogRecPtr);
+	KeepLogSeg(endptr, &_logSegNo);
 	if (InvalidateObsoleteReplicationSlots(_logSegNo))
 	{
 		/*
@@ -10328,7 +10328,7 @@ CreateRestartPoint(int flags)
 		 * horizon, starting again from RedoRecPtr.
 		 */
 		XLByteToSeg(RedoRecPtr, _logSegNo, wal_segment_size);
-		KeepLogSeg(endptr, &_logSegNo, InvalidXLogRecPtr);
+		KeepLogSeg(endptr, &_logSegNo);
 	}
 	_logSegNo--;
 
@@ -10447,7 +10447,7 @@ GetWALAvailability(XLogRecPtr targetLSN)
 
 	/* calculate oldest segment currently needed by slots */
 	XLByteToSeg(currpos, oldestSlotSeg, wal_segment_size);
-	KeepLogSeg(currpos, &oldestSlotSeg, InvalidXLogRecPtr);
+	KeepLogSeg(currpos, &oldestSlotSeg);
 
 	/*
 	 * Find the oldest extant segment file. We get 1 until checkpoint removes
@@ -10508,12 +10508,11 @@ GetWALAvailability(XLogRecPtr targetLSN)
  * invalidation is optionally done here, instead.
  */
 static void
-KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr)
+KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo)
 {
 	XLogSegNo	currSegNo;
 	XLogSegNo	segno;
 	XLogRecPtr	keep;
-	static XLogRecPtr CkptRedoBeforeMinLSN = InvalidXLogRecPtr;
 
 	XLByteToSeg(recptr, currSegNo, wal_segment_size);
 	segno = currSegNo;
@@ -10531,34 +10530,17 @@ KeepLogSeg(XLogRecPtr recptr, XLogSegNo *logSegNo, XLogRecPtr PriorRedoPtr)
 
 #ifdef FAULT_INJECTOR
 	/*
-	 * Let the WAL still needed be removed.  This is used to test if WAL sender
-	 * can recognize that an incremental recovery has failed when the WAL
+	 * Ignore the replication slot's LSN and let the WAL still needed by the
+	 * replication slot to be removed.  This is used to test if WAL sender can
+	 * recognize that an incremental recovery has failed when the WAL
 	 * requested by a mirror no longer exists.
 	 */
 	if (SIMPLE_FAULT_INJECTOR("keep_log_seg") == FaultInjectorTypeSkip)
-	{
 		keep = GetXLogWriteRecPtr();
-		XLByteToSeg(keep, *logSegNo, wal_segment_size);
-	}
 #endif
 
 	if (keep != InvalidXLogRecPtr)
 	{
-		/*
-		 * GPDB never uses restart_lsn as lowest cut-off point. Instead always
-		 * will use Checkpoint redo location prior to restart_lsn as cut-off
-		 * point.
-		 */
-		if (!XLogRecPtrIsInvalid(PriorRedoPtr))
-		{
-			if (PriorRedoPtr < keep)
-			{
-				keep = PriorRedoPtr;
-				CkptRedoBeforeMinLSN = PriorRedoPtr;
-			}
-			else if (!XLogRecPtrIsInvalid(CkptRedoBeforeMinLSN))
-				keep = CkptRedoBeforeMinLSN;
-		}
 		XLByteToSeg(keep, segno, wal_segment_size);
 
 		/* Cap by max_slot_wal_keep_size ... */
