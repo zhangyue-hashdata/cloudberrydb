@@ -182,9 +182,6 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 		ds[i] = create_datumstreamwrite(ct,
 										clvl,
 										checksum,
-										 /* safeFSWriteSize */ 0,	/* UNDONE: Need to wire
-																	 * down pg_appendonly
-																	 * column? */
 										blksz,
 										attr,
 										RelationGetRelationName(rel),
@@ -277,9 +274,6 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 		ds[attno] = create_datumstreamread(ct,
 										   clvl,
 										   checksum,
-										    /* safeFSWriteSize */ 0,	/* UNDONE:Need to wire
-																			 * down pg_appendonly
-																			 * column */
 										   blksz,
 										   attr,
 										   RelationGetRelationName(rel),
@@ -598,7 +592,6 @@ aocs_beginscan_internal(Relation relation,
 	scan->columnScanInfo.ds = NULL;
 
 	GetAppendOnlyEntryAttributes(RelationGetRelid(relation),
-								 NULL,
 								 NULL,
 								 NULL,
 								 &scan->checksum,
@@ -1019,7 +1012,6 @@ aocs_insert_init(Relation rel, int segno)
 
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  &desc->blocksz,
-                                 NULL,
                                  (int16 *)&desc->compLevel,
                                  &desc->checksum,
                                  &nd);
@@ -1505,7 +1497,6 @@ aocs_fetch_init(Relation relation,
     GetAppendOnlyEntryAttributes(relation->rd_id,
                                  NULL,
                                  NULL,
-                                 NULL,
                                  &checksum,
                                  NULL);
 
@@ -1579,9 +1570,6 @@ aocs_fetch_init(Relation relation,
 				create_datumstreamread(ct,
 									   clvl,
 									   checksum,
-									    /* safeFSWriteSize */ 0,	/* UNDONE:Need to wire
-																		 * down pg_appendonly
-																		 * column */
 									   blksz,
 									   TupleDescAttr(tupleDesc, colno),
 									   relation->rd_rel->relname.data,
@@ -1949,7 +1937,6 @@ aocs_begin_headerscan(Relation rel, int colno)
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
                                  NULL,
-                                 NULL,
                                  &ao_attr.checksum,
                                  NULL);
 
@@ -1961,7 +1948,6 @@ aocs_begin_headerscan(Relation rel, int colno)
 	ao_attr.compressType = NULL;
 	ao_attr.compressLevel = 0;
 	ao_attr.overflowSize = 0;
-	ao_attr.safeFSWriteSize = 0;
 	hdesc = palloc(sizeof(AOCSHeaderScanDescData));
 	
 	RelationOpenSmgr(rel);
@@ -2057,7 +2043,6 @@ aocs_addcol_init(Relation rel,
     GetAppendOnlyEntryAttributes(rel->rd_id,
                                  NULL,
                                  NULL,
-                                 NULL,
                                  &checksum,
                                  NULL);
 
@@ -2076,7 +2061,7 @@ aocs_addcol_init(Relation rel,
 		blksz = opts[iattr]->blocksize;
 		RelationOpenSmgr(rel);
 
-		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
+		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, blksz,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
 											   XLogIsNeeded() && RelationNeedsWAL(rel),

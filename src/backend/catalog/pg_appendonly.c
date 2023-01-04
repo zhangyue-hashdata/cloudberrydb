@@ -51,7 +51,6 @@ static void TransferAppendonlyEntries(Oid fromrelid, Oid torelid);
 void
 InsertAppendOnlyEntry(Oid relid, 
 					  int blocksize, 
-					  int safefswritesize, 
 					  int compresslevel,
 					  bool checksum,
                       bool columnstore,
@@ -92,7 +91,6 @@ InsertAppendOnlyEntry(Oid relid,
 		namestrcpy(&compresstype_name, "");
 	values[Anum_pg_appendonly_relid - 1] = ObjectIdGetDatum(relid);
 	values[Anum_pg_appendonly_blocksize - 1] = Int32GetDatum(blocksize);
-	values[Anum_pg_appendonly_safefswritesize - 1] = Int32GetDatum(safefswritesize);
 	values[Anum_pg_appendonly_compresslevel - 1] = Int32GetDatum(compresslevel);
 	values[Anum_pg_appendonly_checksum - 1] = BoolGetDatum(checksum);
 	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
@@ -129,7 +127,6 @@ InsertAppendOnlyEntry(Oid relid,
 void
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
-							 int32 *safefswritesize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype)
@@ -161,9 +158,6 @@ GetAppendOnlyEntryAttributes(Oid relid,
 	aoForm = (Form_pg_appendonly) GETSTRUCT(tuple);
 	if (blocksize != NULL)
 		*blocksize = aoForm->blocksize;
-
-	if (safefswritesize != NULL)
-		*safefswritesize = aoForm->safefswritesize;
 
 	if (compresslevel != NULL)
 		*compresslevel = aoForm->compresslevel;

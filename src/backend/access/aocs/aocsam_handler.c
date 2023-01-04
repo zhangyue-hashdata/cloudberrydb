@@ -2408,7 +2408,6 @@ aoco_transform_column_encoding_clauses(Relation rel, List *aocoColumnEncoding,
 	{
 		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 									 &blocksize,
-									 NULL,
 									 &compresslevel,
 									 NULL,
 									 &compresstype_nd);

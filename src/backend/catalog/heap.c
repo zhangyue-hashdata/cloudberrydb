@@ -1787,7 +1787,6 @@ heap_create_with_catalog(const char *relname,
 																	 RELOPT_KIND_APPENDOPTIMIZED);
 		InsertAppendOnlyEntry(relid,
 							  stdRdOptions->blocksize,
-							  gp_safefswritesize,
 							  stdRdOptions->compresslevel,
 							  stdRdOptions->checksum,
 							  RelationIsAoCols(new_rel_desc),

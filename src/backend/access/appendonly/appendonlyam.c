@@ -1476,12 +1476,11 @@ appendonly_beginrangescan_internal(Relation relation,
 	AppendOnlyStorageAttributes *attr;
 	StringInfoData titleBuf;
 	int32 blocksize;
-	int32 safefswritesize;
 	int16 compresslevel;
 	bool checksum;
 	NameData compresstype;
 
-	GetAppendOnlyEntryAttributes(relation->rd_id, &blocksize, &safefswritesize, &compresslevel, &checksum, &compresstype);
+	GetAppendOnlyEntryAttributes(relation->rd_id, &blocksize, &compresslevel, &checksum, &compresstype);
 
 	/*
 	 * increment relation ref count while scanning relation
@@ -1540,7 +1539,6 @@ appendonly_beginrangescan_internal(Relation relation,
 	}
 	attr->compressLevel = compresslevel;
 	attr->checksum = checksum;
-	attr->safeFSWriteSize = safefswritesize;
 
 	/* UNDONE: We are calling the static header length routine here. */
 	scan->maxDataLen =
@@ -2190,7 +2188,6 @@ appendonly_fetch_init(Relation relation,
 	}
 	attr->compressLevel = aoFormData.compresslevel;
 	attr->checksum = aoFormData.checksum;
-	attr->safeFSWriteSize = aoFormData.safefswritesize;
 	aoFetchDesc->usableBlockSize = aoFormData.blocksize;
 
 	/*
@@ -2635,12 +2632,11 @@ appendonly_insert_init(Relation rel, int segno)
 
 	StringInfoData titleBuf;
 	int32 blocksize;
-	int32 safefswritesize;
 	int16 compresslevel;
 	bool checksum;
 	NameData compresstype;
 
-	GetAppendOnlyEntryAttributes(rel->rd_id, &blocksize, &safefswritesize, &compresslevel, &checksum, &compresstype);
+	GetAppendOnlyEntryAttributes(rel->rd_id, &blocksize, &compresslevel, &checksum, &compresstype);
 
 	/*
 	 * Get the pg_appendonly information for this table
@@ -2711,7 +2707,6 @@ appendonly_insert_init(Relation rel, int segno)
 	}
 	attr->compressLevel = compresslevel;
 	attr->checksum = checksum;
-	attr->safeFSWriteSize = safefswritesize;
 
 	fns = get_funcs_for_compression(NameStr(compresstype));
 
