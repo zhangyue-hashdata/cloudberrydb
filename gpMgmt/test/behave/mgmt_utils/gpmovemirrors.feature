@@ -146,6 +146,7 @@ Feature: Tests for gpmovemirrors
         | run gprecoverseg          | some         | 0                  | 1,2            | running in place full recovery for all failed contents |
         | run gprecoverseg          | all          | None               | 0,1,2          | running in place full recovery for all failed contents |
 
+    @skip_cleanup
     Scenario: gpmovemirrors can move mirrors even if start fails for some mirrors
         Given the database is running
         And all the segments are running
