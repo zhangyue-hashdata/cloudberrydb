@@ -27,6 +27,7 @@
 #include "cdb/cdbappendonlystorageformat.h"
 #include "cdb/cdbappendonlystorageread.h"
 #include "storage/gp_compress.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 
 
@@ -1010,7 +1011,9 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 	{
 		/* UNDONE: Finish the read for the information only header. */
 	}
-
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("AppendOnlyStorageRead_ReadNextBlock_success", DDLNotSpecified, "", storageRead->relationName);
+#endif
 	return true;
 }
 
