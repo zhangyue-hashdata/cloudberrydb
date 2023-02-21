@@ -48,9 +48,6 @@ COORDINATOR_ONLY_TABLES_NON_MAPPED = [
 
 COORDINATOR_ONLY_TABLES = [ # TODO: Why 'gp_segment_configuration' is missing here?
     'gp_configuration_history',
-    'pg_auth_time_constraint',
-    'pg_description',
-    'pg_shdescription',
     'pg_stat_last_operation',
     'pg_stat_last_shoperation',
     'pg_statistic',
