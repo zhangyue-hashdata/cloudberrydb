@@ -1976,18 +1976,6 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	bool		has_child;
 
 	/*
-	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
-	 * from segments.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH && ENABLE_DISPATCH())
-	{
-		return acquire_sample_rows_dispatcher(onerel,
-											  true, /* inherited stats */
-											  elevel, rows, targrows,
-											  totalrows, totaldeadrows);
-	}
-
-	/*
 	 * Find all members of inheritance set.  We only need AccessShareLock on
 	 * the children.
 	 */
@@ -2000,6 +1988,7 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 	 * child but no longer does.  In that case, we can clear the
 	 * relhassubclass field so as not to make the same mistake again later.
 	 * (This is safe because we hold ShareUpdateExclusiveLock.)
+	 * Please refer to https://github.com/greenplum-db/gpdb/issues/14644
 	 */
 	if (list_length(tableOIDs) < 2)
 	{
@@ -2012,7 +2001,20 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 				(errmsg("skipping analyze of \"%s.%s\" inheritance tree --- this inheritance tree contains no child tables",
 						get_namespace_name(RelationGetNamespace(onerel)),
 						RelationGetRelationName(onerel))));
-		return 0;
+		if (Gp_role == GP_ROLE_EXECUTE)
+			return 0;
+	}
+
+	/*
+	 * Like in acquire_sample_rows(), if we're in the QD, fetch the sample
+	 * from segments.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		return acquire_sample_rows_dispatcher(onerel,
+											  true, /* inherited stats */
+											  elevel, rows, targrows,
+											  totalrows, totaldeadrows);
 	}
 
 	/*
