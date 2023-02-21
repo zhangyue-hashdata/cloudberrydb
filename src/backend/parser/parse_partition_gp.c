@@ -1463,10 +1463,6 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			parent_tblenc = lappend(parent_tblenc, lfirst(lc));
 	}
 
-	/*
-	 * GPDB_12_MERGE_FIXME: can we optimize grammar to create separate lists
-	 * for elems and encoding in encClauses.
-	 */
 	foreach(lc, gpPartSpec->partDefElems)
 	{
 		Node	   *n = lfirst(lc);
