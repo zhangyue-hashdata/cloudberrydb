@@ -84,6 +84,7 @@ is($result, "reserved|t", 'check that slot is working');
 # The standby can reconnect to primary
 $node_standby->start;
 
+$node_primary->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_primary->lsn('write');
 $node_primary->wait_for_catchup($node_standby, 'replay', $start_lsn);
 
@@ -115,6 +116,7 @@ is($result, "reserved",
 
 # The standby can reconnect to primary
 $node_standby->start;
+$node_primary->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_primary->lsn('write');
 $node_primary->wait_for_catchup($node_standby, 'replay', $start_lsn);
 $node_standby->stop;
@@ -135,6 +137,7 @@ $result = $node_primary->safe_psql('postgres',
 
 # The standby can reconnect to primary
 $node_standby->start;
+$node_primary->safe_psql('postgres', "CHECKPOINT;");
 $start_lsn = $node_primary->lsn('write');
 $node_primary->wait_for_catchup($node_standby, 'replay', $start_lsn);
 $node_standby->stop;
