@@ -13037,6 +13037,7 @@ validateForeignKeyConstraint(char *conname,
 		ereport(WARNING,
 				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 				 errmsg("referential integrity (FOREIGN KEY) constraints are not supported in Cloudberry Database, will not be enforced")));
+	return;
 
 	/*
 	 * Build a trigger call structure; we'll need it either way.
