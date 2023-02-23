@@ -30,6 +30,7 @@ WHERE
 SELECT
 	c.relname,
 	a.attnum,
+	a.filenum,
 	a.attoptions
 FROM
 	pg_catalog.pg_class c
