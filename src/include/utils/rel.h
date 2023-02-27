@@ -474,10 +474,12 @@ typedef struct ViewOptions
 #define InvalidRelation ((Relation) NULL)
 
 /*
- * We do need the RelationIs* macros because the table access method API is
- * not mature enough and/or the append-optimized design is distinct enough.
+ * CAUTION: this macro is a violation of the absraction that table AM and
+ * index AM interfaces provide.  Use of this macro is discouraged.  If
+ * table/index AM API falls short for your use case, consider enhancing the
+ * interface.
+ *
  */
-
 #define RelationIsHeap(relation) \
 	((relation)->rd_amhandler == F_HEAP_TABLEAM_HANDLER)
 
