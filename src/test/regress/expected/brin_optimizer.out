@@ -561,7 +561,11 @@ SELECT brin_desummarize_range('brinidx', 0);
 (1 row)
 
 SELECT brin_summarize_range('brinidx', 0);
-ERROR:  Cloudberry could not summarize indicated page range
+ brin_summarize_range 
+----------------------
+                    0
+(1 row)
+
 DROP TABLE brintest_2;
 -- test brin cost estimates behave sanely based on correlation of values
 -- GPDB: use more rows, and a larger statistics sample, to get the same plan

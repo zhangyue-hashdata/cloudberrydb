@@ -408,21 +408,33 @@ END;
 $$;
 -- summarize one range
 SELECT brin_summarize_range('brin_summarize_multi_idx', 0);
-ERROR:  Cloudberry could not summarize indicated page range
+ brin_summarize_range 
+----------------------
+                    0
+(1 row)
+
 CONTEXT:  SQL function "brin_summarize_range" statement 1
 -- nothing: already summarized
 SELECT brin_summarize_range('brin_summarize_multi_idx', 1);
-ERROR:  Cloudberry could not summarize indicated page range
+ brin_summarize_range 
+----------------------
+                    0
+(1 row)
+
 CONTEXT:  SQL function "brin_summarize_range" statement 1
 -- summarize one range
 SELECT brin_summarize_range('brin_summarize_multi_idx', 2);
-ERROR:  Cloudberry could not summarize indicated page range
+ brin_summarize_range 
+----------------------
+                    1
+(1 row)
+
 CONTEXT:  SQL function "brin_summarize_range" statement 1
 -- nothing: page doesn't exist in table
 SELECT brin_summarize_range('brin_summarize_multi_idx', 4294967295);
  brin_summarize_range 
 ----------------------
-                    1
+                    0
 (1 row)
 
 -- invalid block number values
