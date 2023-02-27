@@ -204,6 +204,9 @@ installcheck: installcheck-good
 installcheck-small: all tablespace-setup
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule $(EXTRA_TESTS)
 
+installcheck-cbdb: all tablespace-setup twophase_pqexecparams hooktest query_info_hook_test
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/greenplum_schedule $(EXTRA_TESTS)
+
 installcheck-good: all tablespace-setup twophase_pqexecparams hooktest query_info_hook_test
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule $(EXTRA_TESTS)
 

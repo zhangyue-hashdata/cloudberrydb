@@ -1,4 +1,8 @@
-CREATE TABLE brintest_aocs (byteacol bytea,
+-- Most of these test steps are modified such that the tables' tuples are
+-- co-located on one QE.
+
+CREATE TABLE brintest_aocs (id int,
+	byteacol bytea,
 	charcol "char",
 	namecol name,
 	int8col bigint,
@@ -29,6 +33,7 @@ CREATE TABLE brintest_aocs (byteacol bytea,
 ) WITH (appendonly = true, orientation=column);
 
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 8)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -59,7 +64,8 @@ INSERT INTO brintest_aocs SELECT
 FROM tenk1 ORDER BY unique2 LIMIT 100;
 
 -- throw in some NULL's and different values
-INSERT INTO brintest_aocs (inetcol, cidrcol, int4rangecol) SELECT
+INSERT INTO brintest_aocs (id, inetcol, cidrcol, int4rangecol) SELECT
+	1,
 	inet 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	cidr 'fe80::6e40:8ff:fea9:8c46' + tenthous,
 	'empty'::int4range
@@ -419,6 +425,7 @@ RESET optimizer_enable_tablescan;
 RESET optimizer_enable_bitmapscan;
 
 INSERT INTO brintest_aocs SELECT
+	1,
 	repeat(stringu1, 42)::bytea,
 	substr(stringu1, 1, 1)::"char",
 	stringu1::name, 142857 * tenthous,
@@ -456,10 +463,8 @@ UPDATE brintest_aocs SET textcol = '' WHERE textcol IS NOT NULL;
 -- Vaccum again so that a new segment file is created.
 VACUUM brintest_aocs;
 INSERT INTO brintest_aocs SELECT * FROM brintest_aocs;
--- We should have two segment files per Cloudberry segment (QE).
--- start_ignore
-SELECT segment_id, segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('brintest_aocs');
--- end_ignore
+-- We should have two segment files.
+SELECT segment_id, segno, column_num FROM gp_toolkit.__gp_aocsseg('brintest_aocs');
 
 -- Tests for brin_summarize_new_values
 SELECT brin_summarize_new_values('brintest_aocs'); -- error, not an index
@@ -468,6 +473,7 @@ SELECT brin_summarize_new_values('tenk1_unique1'); -- error, not a BRIN index
 -- Index dead tuples will not always be cleaned up completely after VACUUM, resulting
 -- brin_summarize_new_values() will not always be accurate. So ignore the check to
 -- coordinate with the new behavior.
--- start_ignore
 SELECT brin_summarize_new_values('brinaocsidx'); -- ok, no change expected
--- end_ignore
+
+-- We don't allow specific range summarization for AO tables at the moment.
+SELECT brin_summarize_range('brinaocsidx', 1);
