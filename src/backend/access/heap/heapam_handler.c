@@ -2059,17 +2059,27 @@ heapam_scan_get_blocks_done(HeapScanDesc hscan)
  * append-optimized tables. This sequence extends from block 0 to the number of
  * blocks in the table.
  */
+static void
+heap_relation_get_block_sequence(Relation rel,
+								 BlockNumber heapBlk,
+								 BlockSequence *sequence)
+{
+	sequence->startblknum = 0;
+	sequence->nblocks = RelationGetNumberOfBlocks(rel);
+}
+
 static BlockSequence *
 heap_relation_get_block_sequences(Relation rel,
 								  int *numSequences)
 {
-	BlockSequence *blockSequence = palloc(sizeof(BlockSequence) * 1);
+	BlockSequence *blockSequence;
+
 	Assert(numSequences);
 	*numSequences = 1;
 
-	blockSequence->startblknum = 0;
-	blockSequence->nblocks = RelationGetNumberOfBlocks(rel);
+	blockSequence = palloc(sizeof(BlockSequence) * 1);
 
+	heap_relation_get_block_sequence(rel, InvalidBlockNumber, blockSequence);
 	return blockSequence;
 }
 
@@ -2665,6 +2675,7 @@ static const TableAmRoutine heapam_methods = {
 
 	.relation_size = table_block_relation_size,
 	.relation_get_block_sequences = heap_relation_get_block_sequences,
+	.relation_get_block_sequence = heap_relation_get_block_sequence,
 	.relation_needs_toast_table = heapam_relation_needs_toast_table,
 	.relation_toast_am = heapam_relation_toast_am,
 	.relation_fetch_toast_slice = heap_fetch_toast_slice,
