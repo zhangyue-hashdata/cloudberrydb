@@ -375,4 +375,7 @@ test: enum_dist_part_ban
 test: hba_conf
 test: dboptions
 
+# test dispatch and result handling of gp_log_memory_backend_contexts
+test: gp_log_mem_dispatch
+
 # end of tests
