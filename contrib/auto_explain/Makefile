@@ -6,7 +6,7 @@ OBJS = \
 	auto_explain.o
 PGFILEDESC = "auto_explain - logging facility for execution plans"
 
-REGRESS = auto_explain
+REGRESS = auto_explain  memory_leaks
 REGRESS_OPTS = --init-file=init_file
 TAP_TESTS = 1
 
