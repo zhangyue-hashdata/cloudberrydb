@@ -238,3 +238,10 @@ select distinct(count(a)) from generate_series(0, 1) as a;
 explain(verbose, costs off)
 select distinct(count(*)) from generate_series(0, 1) a join generate_series(0, 2) b on true;
 select distinct(count(*)) from generate_series(0, 1) a join generate_series(0, 2) b on true;
+-- please refer to https://github.com/greenplum-db/gpdb/issues/15033
+CREATE TABLE t1_issue_15033(c DECIMAL CHECK (0.4 IS DISTINCT FROM 0.3));
+CREATE TABLE t2_issue_15033(c DECIMAL CHECK (0.4 IS NOT DISTINCT FROM 0.3));
+INSERT INTO t1_issue_15033 VALUES(10);
+SELECT * FROM t1_issue_15033;
+INSERT INTO t2_issue_15033 VALUES(10);
+SELECT * FROM t2_issue_15033;
