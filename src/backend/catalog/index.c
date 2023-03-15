@@ -1087,6 +1087,7 @@ index_create_internal(Relation heapRelation,
 	/* done with pg_class */
 	table_close(pg_class, RowExclusiveLock);
 
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{							/* MPP-7575: track index creation */
 		bool	 doIt	= true;
 		char	*subtyp = "INDEX";
@@ -2531,8 +2532,9 @@ index_drop(Oid indexId, bool concurrent, bool concurrent_lock_mode)
 	DeleteInheritsTuple(indexId, InvalidOid, false, NULL);
 	
 	/* MPP-6929: metadata tracking */
-	MetaTrackDropObject(RelationRelationId, 
-						indexId);
+	if (Gp_role == GP_ROLE_DISPATCH)
+		MetaTrackDropObject(RelationRelationId,
+							indexId);
 
 	/*
 	 * We are presently too lazy to attempt to compute the new correct value
@@ -3995,6 +3997,7 @@ reindex_index(Oid indexId, bool skip_constraint_checks, char persistence,
 		table_close(pg_index, RowExclusiveLock);
 	}
 
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		bool	 doIt	= true;
 		char	*subtyp = "REINDEX";
