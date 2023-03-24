@@ -2185,7 +2185,7 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			CdbPathLocus_MakeReplicated(&small_rel->move_to,
 										CdbPathLocus_NumSegments(large_rel->locus), 0);
 
-		/* Replicate largeer rel if cheaper than redistributing both rels. */
+		/* Replicate larger rel if cheaper than redistributing both rels. */
 		else if (!large_rel->require_existing_order &&
 				 large_rel->ok_to_replicate &&
 				 (large_rel->bytes * CdbPathLocus_NumSegments(small_rel->locus) <
@@ -3038,7 +3038,7 @@ cdbpath_motion_for_parallel_join(PlannerInfo *root,
 	 * And in the function cdbpathlocus_join there is a rule:
 	 * <any locus type> join <Replicated> => any locus type
 	 * Proof by contradiction, it shows that when code arrives here,
-	 * is is impossible that any of the two input paths' locus
+	 * it is impossible that any of the two input paths' locus
 	 * is Replicated. So we add asserts here.
 	 */
 	Assert(!CdbPathLocus_IsReplicated(outer.locus));
