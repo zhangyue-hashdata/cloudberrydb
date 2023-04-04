@@ -911,7 +911,7 @@ FROM
          pg_stat_all_indexes_internal
      WHERE
              relid < 16384) m, pg_stat_all_indexes_internal s
-WHERE m.relid = s.relid;
+WHERE m.indexrelid = s.indexrelid;
 
 CREATE VIEW pg_stat_sys_indexes AS
     SELECT * FROM pg_stat_all_indexes
