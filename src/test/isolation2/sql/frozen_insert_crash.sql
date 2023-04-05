@@ -98,7 +98,24 @@
 
 1: drop table tab_fi;
 
--- validate that we've actually tested desired scan method
+
+-- Test for aoseg: suspend the insert into aoseg table before we mark the row frozen.
+-- Another session should still be able to choose a different segno.
+1: create table tab_aoseg(a int) using ao_row;
+1: select gp_inject_fault('insert_aoseg_before_freeze', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1: begin;
+1>: insert into tab_aoseg select * from generate_series(1,10);
+-- wait until the aoseg record is inserted but not yet frozen
+2: select gp_wait_until_triggered_fault('insert_aoseg_before_freeze', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+2: begin;
+2>: insert into tab_aoseg select * from generate_series(1,10);
+3: select gp_inject_fault('insert_aoseg_before_freeze', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+1<:
+2<:
+1: end;
+2: end;
+3: select segment_id, segno, eof from gp_toolkit.__gp_aoseg('tab_aoseg') where segment_id = 0;
+
 -- for some reason this disrupts the output of subsequent queries so
 -- validating at the end here
 ! psql postgres -At -c "set enable_indexscan = off; set enable_seqscan = on; explain (costs off) select distinct f.gp_segment_id, f.objmod, f.last_sequence from gp_dist_random('gp_fastsequence') f left join gp_dist_random('pg_appendonly') a on segrelid = objid and a.gp_segment_id = f.gp_segment_id where a.gp_segment_id = 0 and relid = (select oid from pg_class where relname = 'tab_fi');" | grep "Seq Scan on gp_fastsequence";
