@@ -317,3 +317,20 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         And gpinitsystem should not print "Start Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout
         And gpinitsystem should not print "End Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout
+
+    Scenario: gpinitsystem should pass the default value of trusted_shell properly to gpcreateseg
+        Given create demo cluster config
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -h ../gpAux/gpdemo/hostfile --ignore-warnings"
+        Then gpinitsystem should return a return code of 0
+        When the user runs command "grep -q '.*gpcreateseg\.sh.*Completed .*lalshell.*' ~/gpAdminLogs/gpinitsystem*log"
+        Then grep should return a return code of 0
+
+    Scenario: gpinitsystem should pass the changed value of trusted_shell properly to gpcreateseg
+        Given create demo cluster config
+        And the user runs command "sed -i.bak -E 's/TRUSTED_SHELL=.*/TRUSTED_SHELL=ssh/g' ../gpAux/gpdemo/clusterConfigFile"
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -h ../gpAux/gpdemo/hostfile"
+        Then gpinitsystem should return a return code of 0
+        When the user runs command "grep -q '.*gpcreateseg\.sh.*Completed ssh.*' ~/gpAdminLogs/gpinitsystem*log"
+        Then grep should return a return code of 0
+        And the user runs command "mv ../gpAux/gpdemo/clusterConfigFile.bak ../gpAux/gpdemo/clusterConfigFile"
+
