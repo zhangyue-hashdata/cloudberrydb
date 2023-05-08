@@ -103,48 +103,41 @@ get_funcs_for_compression(char *compresstype)
 Datum *
 get_rel_attoptions(Oid relid, AttrNumber max_attno)
 {
-	Form_pg_attribute attform;
-	ScanKeyData skey;
-	SysScanDesc scan;
-	HeapTuple		tuple;
-	Datum		   *dats;
-	Relation 		pgae = heap_open(AttributeEncodingRelationId,
-									 AccessShareLock);
+	HeapTuple 			atttuple;
+	Form_pg_attribute 		attform;
+	Datum				*dats;
+	CatCList 			*attenclist;
 
 	/* used for attbyval and len below */
-	attform = TupleDescAttr(pgae->rd_att, Anum_pg_attribute_encoding_attoptions - 1);
+	atttuple = SearchSysCache2(ATTNUM,
+							ObjectIdGetDatum(AttributeEncodingRelationId),
+							Int16GetDatum(Anum_pg_attribute_encoding_attoptions));
+	attform = (Form_pg_attribute) GETSTRUCT(atttuple);
 
 	dats = palloc0(max_attno * sizeof(Datum));
 
-	ScanKeyInit(&skey,
-				Anum_pg_attribute_encoding_attrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-	scan = systable_beginscan(pgae, AttributeEncodingAttrelidIndexId, true,
-							  NULL, 1, &skey);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	attenclist = SearchSysCacheList1(ATTENCODINGNUM, relid);
+	for (int i = 0; i < attenclist->n_members; i++)
 	{
-		Form_pg_attribute_encoding a = 
-			(Form_pg_attribute_encoding)GETSTRUCT(tuple);
-		int16 attnum = a->attnum;
-		Datum attoptions;
-		bool isnull;
+		HeapTuple	tuple = &attenclist->members[i]->tuple;
+		Form_pg_attribute_encoding	form = 
+					(Form_pg_attribute_encoding)GETSTRUCT(tuple);
+		AttrNumber 	attnum = form->attnum;
+		Datum 		attoptions;
+		bool 		isnull;
 
 		Assert(attnum > 0 && attnum <= max_attno);
 
-		attoptions = heap_getattr(tuple, Anum_pg_attribute_encoding_attoptions,
-								  RelationGetDescr(pgae), &isnull);
-		Assert(!isnull);
-
-		dats[attnum - 1] = datumCopy(attoptions,
-									 attform->attbyval,
-									 attform->attlen);
+		attoptions = SysCacheGetAttr(ATTENCODINGNUM, tuple, Anum_pg_attribute_encoding_attoptions,
+                                                                   &isnull);
+		if (!isnull)
+			dats[attnum - 1] = datumCopy(attoptions,
+										 attform->attbyval,
+										 attform->attlen);
 	}
+	ReleaseSysCacheList(attenclist);
 
-	systable_endscan(scan);
-
-	heap_close(pgae, AccessShareLock);
+	ReleaseSysCache(atttuple);
 
 	return dats;
 
@@ -338,9 +331,6 @@ RemoveAttributeEncodingsByRelid(Oid relid)
 FileNumber
 GetFilenumForAttribute(Oid relid, AttrNumber attnum)
 {
-	Relation    rel;
-	SysScanDesc scan;
-	ScanKeyData skey[2];
 	HeapTuple	tup;
 	FileNumber  filenum;
 	bool        isnull;
@@ -348,26 +338,21 @@ GetFilenumForAttribute(Oid relid, AttrNumber attnum)
 	Assert(OidIsValid(relid));
 	Assert(AttributeNumberIsValid(attnum));
 
-	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+	tup = SearchSysCache2(ATTENCODINGNUM, 
+							ObjectIdGetDatum(relid),
+							Int16GetDatum(attnum));
+	if (!HeapTupleIsValid(tup))
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+					errmsg("unable to find pg_attribute_encoding entry for attribute %d of relation %u",
+								attnum, relid)));
 
-	ScanKeyInit(&skey[0],
-				Anum_pg_attribute_encoding_attrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-	ScanKeyInit(&skey[1],
-				Anum_pg_attribute_encoding_attnum,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(attnum));
-	scan = systable_beginscan(rel, AttributeEncodingAttrelidAttnumIndexId, true,
-							  NULL, 2, skey);
-
-	tup = systable_getnext(scan);
-	Assert(HeapTupleIsValid(tup));
-	filenum = heap_getattr(tup, Anum_pg_attribute_encoding_filenum,
-							  RelationGetDescr(rel), &isnull);
+	filenum = SysCacheGetAttr(ATTENCODINGNUM,
+							tup,
+							Anum_pg_attribute_encoding_filenum,
+							&isnull);
 	Assert(!isnull);
-	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
+	ReleaseSysCache(tup);
 	return filenum;
 }
 
