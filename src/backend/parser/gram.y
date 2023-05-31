@@ -19655,6 +19655,7 @@ unreserved_keyword:
 			| LOCK_P
 			| LOCKED
 			| LOCUS
+			| LOG_P
 			| LOGGED
 			| MAPPING
 			| MASTER
@@ -20262,7 +20263,6 @@ type_func_name_keyword:
 			| JOIN
 			| LEFT
 			| LIKE
-			| LOG_P
 			| NATURAL
 			| NOTNULL
 			| OUTER_P
