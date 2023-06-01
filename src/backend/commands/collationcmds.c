@@ -31,6 +31,7 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "utils/acl.h"
+#include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/pg_locale.h"
@@ -476,8 +477,16 @@ cmpaliases(const void *a, const void *b)
 }
 #endif							/* READ_LOCALE_A_OUTPUT */
 
+/*
+ * Dispatch collation create command to segments.
+ *
+ * @param alias:	collation name in collname field
+ * @param locale:	locale name, usually include lang and region
+ * @param nspid:	namespace pid
+ * @param provider:	"icu" or "libc", NULL means decided by callee (DefineCollation in QE, default "libc")
+ */
 static void
-DispatchCollationCreate(char *alias, char *locale, Oid nspid, int encoding)
+DispatchCollationCreate(char *alias, char *locale, Oid nspid, char* provider)
 {
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
@@ -488,14 +497,11 @@ DispatchCollationCreate(char *alias, char *locale, Oid nspid, int encoding)
 	names = lappend(names, schemaname);
 	names = lappend(names, relname);
 
-	List *parameters = NIL;
-	DefElem *defstring = makeNode(DefElem);
-
-	defstring->defname = "locale";
-	defstring->defaction = DEFELEM_UNSPEC;
-	defstring->arg = (Node*) makeString(locale);
-
-	parameters = lappend(parameters, defstring);
+	List *parameters = lappend(NIL, makeDefElem("locale", (Node*) makeString(locale), -1));
+	if (provider)
+	{
+		parameters = lappend(parameters, makeDefElem("provider", (Node*) makeString(provider), -1));
+	}
 
 	DefineStmt * stmt = makeNode(DefineStmt);
 	stmt->kind = OBJECT_COLLATION;
@@ -511,7 +517,6 @@ DispatchCollationCreate(char *alias, char *locale, Oid nspid, int encoding)
 	                            GetAssignedOidsForDispatch(),
 	                            NULL);
 }
-
 
 #ifdef USE_ICU
 /*
@@ -660,12 +665,12 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 				continue;		/* ignore locales for client-only encodings */
 			if (enc == PG_SQL_ASCII)
 				continue;		/* C/POSIX are already in the catalog */
-            /*
-             * Cloudberry specific behavior: this function in Cloudberry can only be called after a full cluster is
-             * built, this is different from Postgres which might call this function during initdb. When reaching
-             * here, it must be in a database session, we can just ignore the collations not match current database's
-             * encoding because they cannot be used in this database.
-             */
+			/*
+			 * Greenplum specific behavior: this function in Greenplum can only be called after a full cluster is
+			 * built, this is different from Postgres which might call this function during initdb. When reaching
+			 * here, it must be in a database session, we can just ignore the collations not match current database's
+			 * encoding because they cannot be used in this database.
+			 */
 			if (enc != GetDatabaseEncoding())
 				continue;       /* Ignore collations incompatible with database encoding */ 
 
@@ -688,7 +693,7 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 									 true, true);
 			if (OidIsValid(collid))
 			{
-				DispatchCollationCreate(localebuf, localebuf, nspid, enc);
+				DispatchCollationCreate(localebuf, localebuf, nspid, "libc");
 				ncreated++;
 
 				/* Must do CCI between inserts to handle duplicates correctly */
@@ -750,7 +755,7 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 									 true, true);
 			if (OidIsValid(collid))
 			{
-				DispatchCollationCreate(alias, locale, nspid, enc);
+				DispatchCollationCreate(alias, locale, nspid, "libc");
 				ncreated++;
 
 				CommandCounterIncrement();
@@ -788,6 +793,7 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 			char	   *langtag;
 			char	   *icucomment;
 			const char *collcollate;
+			char	   *collname;
 			Oid			collid;
 
 			if (i == -1)
@@ -805,7 +811,8 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 			if (!pg_is_ascii(langtag) || !pg_is_ascii(collcollate))
 				continue;
 
-			collid = CollationCreate(psprintf("%s-x-icu", langtag),
+			collname = psprintf("%s-x-icu", langtag);
+			collid = CollationCreate(collname,
 									 nspid, GetUserId(),
 									 COLLPROVIDER_ICU, true, -1,
 									 collcollate, collcollate,
@@ -813,6 +820,7 @@ pg_import_system_collations(PG_FUNCTION_ARGS)
 									 true, true);
 			if (OidIsValid(collid))
 			{
+				DispatchCollationCreate(collname, unconstify(char*, collcollate), nspid, "icu");
 				ncreated++;
 
 				CommandCounterIncrement();
