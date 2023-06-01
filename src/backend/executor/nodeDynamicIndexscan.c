@@ -273,9 +273,11 @@ ExecDynamicIndexScan(PlanState *pstate)
 	 * Scan index to find next tuple to return. If the current index
 	 * is exhausted, close it and open the next index for scan.
 	 */
-	while (TupIsNull(slot) &&
-		   initNextIndexToScan(node))
+	for (;;)
 	{
+		if (!initNextIndexToScan(node))
+			return NULL;
+
 		slot = ExecProcNode(&node->indexScanState->ss.ps);
 
 		if (TupIsNull(slot))
@@ -284,6 +286,8 @@ ExecDynamicIndexScan(PlanState *pstate)
 
 			node->scan_state = SCAN_INIT;
 		}
+		else
+			break;
 	}
 	return slot;
 }
