@@ -1264,8 +1264,8 @@ AC_MSG_RESULT([$with_zstd])
 AC_SUBST(with_zstd)
 
 if test "$with_zstd" = yes; then
-  dnl zstd_errors.h was renamed from error_public.h in v1.1.1
-  PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.1.1])
+  dnl zstd_errors.h was renamed from error_public.h in v1.4.0
+  PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.4.0])
 fi
 
 #
