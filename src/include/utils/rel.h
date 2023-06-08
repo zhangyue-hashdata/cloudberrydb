@@ -504,6 +504,10 @@ typedef struct ViewOptions
 #define RelationIsAoRows(relation) \
 	AMHandlerIsAoRows((relation)->rd_amhandler)
 
+#define RelationStorageIsAoRows(relation) \
+	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -515,6 +519,10 @@ typedef struct ViewOptions
  */
 #define RelationIsAoCols(relation) \
 	AMHandlerIsAoCols((relation)->rd_amhandler)
+
+#define RelationStorageIsAoCols(relation) \
+	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
@@ -530,7 +538,7 @@ typedef struct ViewOptions
 
 #define RelationStorageIsAO(relation) \
 	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
-		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * FIXME: CBDB should not know the am oid of PAX. We put here because the kernel
