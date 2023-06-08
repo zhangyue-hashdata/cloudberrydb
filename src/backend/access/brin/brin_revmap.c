@@ -721,7 +721,7 @@ revmap_physical_extend(BrinRevmap *revmap, LogicalPageNum targetLogicalPageNum)
 	Page		page;
 	Page		metapage;
 	BrinMetaPageData *metadata;
-	BlockNumber mapBlk;
+	BlockNumber mapBlk = InvalidBlockNumber;
 	BlockNumber nblocks;
 	Relation	irel = revmap->rm_irel;
 	bool		needLock = !RELATION_IS_LOCAL(irel);
