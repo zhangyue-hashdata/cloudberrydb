@@ -4290,6 +4290,8 @@ raw_expression_tree_walker(Node *node,
 		case T_CommonTableExpr:
 			/* search_clause and cycle_clause are not interesting here */
 			return walker(((CommonTableExpr *) node)->ctequery, context);
+		case T_TableValueExpr:
+			return walker(((TableValueExpr *) node)->subquery, context);
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));
