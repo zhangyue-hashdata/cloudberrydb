@@ -3748,8 +3748,8 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		pfree(transportStates);
 	}
 
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_TERSE)
-		elog(DEBUG1, "TeardownUDPIFCInterconnect successful");
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		elog(DEBUG4, "TeardownUDPIFCInterconnect successful");
 
 	RESUME_INTERRUPTS();
 }
