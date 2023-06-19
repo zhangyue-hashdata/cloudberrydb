@@ -82,7 +82,6 @@ DIRNAME=`findCmdInPath dirname`
 ECHO=`findCmdInPath echo`
 FIND=`findCmdInPath find`
 GREP=`findCmdInPath grep`
-EGREP=`findCmdInPath egrep`
 HEAD=`findCmdInPath head`
 HOSTNAME=`findCmdInPath hostname`
 IP=`findCmdInPath ip`
