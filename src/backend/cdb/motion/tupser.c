@@ -40,13 +40,6 @@
  */
 #define RECORD_CACHE_MAGIC_TUPLEN	-1
 
-/* A MemoryContext used within the tuple serialize code, so that freeing of
- * space is SUPAFAST.  It is initialized in the first call to InitSerTupInfo()
- * since that must be called before any tuple serialization or deserialization
- * work can be done.
- */
-static MemoryContext s_tupSerMemCtxt = NULL;
-
 static void addByteStringToChunkList(TupleChunkList tcList, char *data, int datalen, TupleChunkListCache *cache);
 
 #define addCharToChunkList(tcList, x, c)							\
@@ -81,18 +74,6 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo *pSerInfo)
 
 	AssertArg(tupdesc != NULL);
 	AssertArg(pSerInfo != NULL);
-
-	if (s_tupSerMemCtxt == NULL)
-	{
-		/* Create tuple-serialization memory context. */
-		s_tupSerMemCtxt =
-			AllocSetContextCreate(TopMemoryContext,
-								  "TupSerMemCtxt",
-								  ALLOCSET_DEFAULT_INITSIZE,	/* always have some
-																 * memory */
-								  ALLOCSET_DEFAULT_INITSIZE,
-								  ALLOCSET_DEFAULT_MAXSIZE);
-	}
 
 	/* Set contents to all 0, just to make things clean and easy. */
 	memset(pSerInfo, 0, sizeof(SerTupInfo));
@@ -273,7 +254,6 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 							   int32 sent_record_typmod)
 {
 	TupleChunkListItem tcItem = NULL;
-	MemoryContext oldCtxt;
 	List	   *typelist = NULL;
 	int			size = -1;
 	char	   *buf = NULL;
@@ -295,8 +275,6 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
 	appendChunkToTCList(tcList, tcItem);
 
-	AssertState(s_tupSerMemCtxt != NULL);
-
 	/*
 	 * To avoid inconsistency of record cache between sender and receiver in
 	 * the same motion, send the serialized record cache to receiver before
@@ -304,10 +282,9 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	 * the records to its own local cache and remapping the typmod of tuples
 	 * sent by sender.
 	 */
-	oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
 	typelist = build_tuple_node_list(sent_record_typmod);
 	buf = serializeNode((Node *) typelist, &size, NULL);
-	MemoryContextSwitchTo(oldCtxt);
+	list_free_deep(typelist);
 
 	/*
 	 * we use magic tuplen to identify that this chunk (or list of chunks)
@@ -321,6 +298,7 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	addByteStringToChunkList(tcList, (char *) &size, sizeof(int),
 							 &pSerInfo->chunkCache);
 	addByteStringToChunkList(tcList, buf, size, &pSerInfo->chunkCache);
+	pfree(buf);
 
 	/*
 	 * if we have more than 1 chunk we have to set the chunk types on our
@@ -502,17 +480,8 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 	tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
 	appendChunkToTCList(tcList, tcItem);
 
-	AssertState(s_tupSerMemCtxt != NULL);
-
 	addByteStringToChunkList(tcList, (char *) &tupbodylen, sizeof(tupbodylen), &pSerInfo->chunkCache);
 	addByteStringToChunkList(tcList, tupbody, tupbodylen, &pSerInfo->chunkCache);
-
-	/*
-	 * GPDB_12_MERGE_FIXME: This function does not use this context. This context
-	 * is only used in SerializeRecordCacheIntoChunks(). We need to find a better
-	 * place for resetting it, or eliminating the needs for this context.
-	 */
-	MemoryContextReset(s_tupSerMemCtxt);
 
 	/*
 	 * if we have more than 1 chunk we have to set the chunk types on our
