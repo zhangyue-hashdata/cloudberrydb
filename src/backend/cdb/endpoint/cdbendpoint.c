@@ -421,7 +421,7 @@ static Endpoint
 				sharedEndpoints[i].mqDsmHandle = DSM_HANDLE_INVALID;
 				sharedEndpoints[i].sessionDsmHandle = DSM_HANDLE_INVALID;
 				sharedEndpoints[i].sessionID = gp_session_id;
-				sharedEndpoints[i].userID = GetSessionUserId();
+				sharedEndpoints[i].userID = GetUserId();
 				sharedEndpoints[i].senderPid = InvalidPid;
 				sharedEndpoints[i].receiverPid = InvalidPid;
 				sharedEndpoints[i].empty = false;
@@ -461,7 +461,7 @@ static Endpoint
 	strlcpy(sharedEndpoints[i].cursorName, cursorName, NAMEDATALEN);
 	sharedEndpoints[i].databaseID = MyDatabaseId;
 	sharedEndpoints[i].sessionID = gp_session_id;
-	sharedEndpoints[i].userID = GetSessionUserId();
+	sharedEndpoints[i].userID = GetUserId();
 	sharedEndpoints[i].senderPid = MyProcPid;
 	sharedEndpoints[i].receiverPid = InvalidPid;
 	sharedEndpoints[i].state = ENDPOINTSTATE_READY;
@@ -552,7 +552,7 @@ setup_endpoint_token_entry()
 	const int8 *token = NULL;
 
 	tag.sessionID = gp_session_id;
-	tag.userID = GetSessionUserId();
+	tag.userID = GetUserId();
 
 	LWLockAcquire(ParallelCursorEndpointLock, LW_EXCLUSIVE);
 	infoEntry = (EndpointTokenEntry *) hash_search(EndpointTokenHash, &tag, HASH_ENTER, &found);
