@@ -862,6 +862,7 @@ select min(y), max(y) from part;
 
 -- test partitioned table with external table as partition
 ALTER TABLE part EXCHANGE PARTITION part1 WITH TABLE tst_exttbl;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 explain (costs off, locus) select min(y), max(y) from part;
                       QUERY PLAN                       
 -------------------------------------------------------
@@ -893,6 +894,7 @@ select min(y), max(y) from part;
 (1 row)
 
 ALTER TABLE part EXCHANGE PARTITION part1 WITH TABLE tst_exttbl_all;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 explain (costs off, locus) select min(y), max(y) from part;
                               QUERY PLAN                               
 -----------------------------------------------------------------------

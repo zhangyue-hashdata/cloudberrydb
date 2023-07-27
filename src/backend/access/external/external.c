@@ -195,6 +195,8 @@ GetExtTableEntryIfExists(Oid relid)
 
 	extentry = GetExtFromForeignTableOptions(ft->options, relid);
 
+	pfree(ft);
+
 	return extentry;
 }
 
