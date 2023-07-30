@@ -118,7 +118,6 @@
 3: select segment_id, segno, eof from gp_toolkit.__gp_aoseg('tab_aoseg') where segment_id = 0;
 
 -- Same set of tests for bitmap LOV insert.
-create extension if not exists pageinspect;
 
 -- Function to check the bitmap lov content regarding the column 'b'
 -- which is the table column that we will have bitmap created on.
