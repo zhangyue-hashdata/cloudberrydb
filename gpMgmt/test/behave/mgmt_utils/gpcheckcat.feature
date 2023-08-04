@@ -669,6 +669,7 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr_db3"
         Then gpcheckcat should print "Missing" to stdout
+        And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_foreign_table" to stdout
         And gpcheckcat should print "Table miss_attr_db3.public.part_external_1_prt_p_2.-1" to stdout
         Examples:
             | attrname   | tablename          |
@@ -697,6 +698,18 @@ Feature: gpcheckcat tests
 #            | attrname   | tablename     |
 #            | conrelid   | pg_constraint |
 #
+
+    Scenario: gpcheckcat should discover missing attributes of pg_description catalogue table
+        Given there is a "heap" table "public.heap_table" in "miss_attr_db5" with data and description
+        When the user runs "gpcheckcat -v miss_attr_db5"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print "Missing" to stdout
+        And the user runs "psql miss_attr_db5 -c "SET allow_system_table_mods=true; DELETE FROM pg_description where objoid='heap_table'::regclass::oid;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat -v miss_attr_db5"
+        Then gpcheckcat should print "Missing description metadata of {.*} on content -1" to stdout
+        And gpcheckcat should not print "Execution error:" to stdout
+        And gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_description" to stdout
 
 
     Scenario: set multiple GUC at session level in gpcheckcat
