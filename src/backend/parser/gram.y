@@ -4174,8 +4174,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +1;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITH VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITH VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}
@@ -4183,8 +4183,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +0;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}

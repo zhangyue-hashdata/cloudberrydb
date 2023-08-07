@@ -390,8 +390,9 @@ alter table foo_p exchange partition for(6) with table bar_p;
 ERROR:  partition constraint of relation "bar_p" is violated by some row  (seg2 127.0.1.1:7004 pid=1927394)
 alter table foo_p exchange partition for(6) with table bar_p without
 validation;
-NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
-ERROR:  partition constraint of relation "bar_p" is violated by some row  (seg2 127.0.1.1:7004 pid=1927394)
+NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation
+DETAIL:  If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+ERROR:  partition constraint of relation "bar_p" is violated by some row  (seg2 127.0.0.1:7004 pid=4189072)
 analyze foo_p;
 select * from foo_p;
  i 
