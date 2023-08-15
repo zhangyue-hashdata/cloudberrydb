@@ -2827,7 +2827,7 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
         truncate = False
         self.reuse_tables = False
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             self.db.query("BEGIN")
 
         self.extSchemaName = self.getconfig('gpload:external:schema', str, None)
@@ -2892,8 +2892,9 @@ WHERE relname = 'staging_gpload_reusable_%s';""" % (encoding_conditions)
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             self.db.query("COMMIT")
+
 
 
     def stop_gpfdists(self):
