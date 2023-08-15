@@ -39,9 +39,9 @@
 #include "postgres.h"
 
 #include "lib/ilist.h"
+#include "utils/gp_alloc.h"
 #include "utils/memdebug.h"
 #include "utils/memutils.h"
-
 
 #define Generation_BLOCKHDRSZ	MAXALIGN(sizeof(GenerationBlock))
 #define Generation_CHUNKHDRSZ	sizeof(GenerationChunk)
@@ -225,7 +225,7 @@ GenerationContextCreate(MemoryContext parent,
 	 * freeing the first generation of allocations.
 	 */
 
-	set = (GenerationContext *) malloc(MAXALIGN(sizeof(GenerationContext)));
+	set = (GenerationContext *) gp_malloc(MAXALIGN(sizeof(GenerationContext)));
 	if (set == NULL)
 	{
 		MemoryContextStats(TopMemoryContext);
@@ -288,7 +288,7 @@ GenerationReset(MemoryContext context)
 		wipe_mem(block, block->blksize);
 #endif
 
-		free(block);
+		gp_free(block);
 	}
 
 	set->block = NULL;
@@ -306,7 +306,7 @@ GenerationDelete(MemoryContext context, MemoryContext parent)
 	/* Reset to release all the GenerationBlocks */
 	GenerationReset(context);
 	/* And free the context header */
-	free(context);
+	gp_free(context);
 }
 
 /*
@@ -335,7 +335,7 @@ GenerationAlloc(MemoryContext context, Size size)
 	{
 		Size		blksize = chunk_size + Generation_BLOCKHDRSZ + Generation_CHUNKHDRSZ;
 
-		block = (GenerationBlock *) malloc(blksize);
+		block = (GenerationBlock *) gp_malloc(blksize);
 		if (block == NULL)
 			return NULL;
 
@@ -389,7 +389,7 @@ GenerationAlloc(MemoryContext context, Size size)
 	{
 		Size		blksize = set->blockSize;
 
-		block = (GenerationBlock *) malloc(blksize);
+		block = (GenerationBlock *) gp_malloc(blksize);
 
 		if (block == NULL)
 			return NULL;
@@ -510,7 +510,7 @@ GenerationFree(MemoryContext context, void *pointer)
 		set->block = NULL;
 
 	context->mem_allocated -= block->blksize;
-	free(block);
+	gp_free(block);
 }
 
 /*
