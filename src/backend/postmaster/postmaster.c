@@ -1039,9 +1039,14 @@ PostmasterMain(int argc, char *argv[])
 		ExitPostmaster(1);
 	}
 
-	/* If gp_role is not set, use utility role instead.*/
+	/*
+	 * If gp_role is not set, use utility role instead.
+	 *
+	 * A single node coordinator or segment is set to utility, which is not
+	 * before Greenplum 7.
+	 */
 	if (Gp_role == GP_ROLE_UNDEFINED)
-		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_DYNAMIC_DEFAULT);
 
 	/*
 	 * Locate the proper configuration files and data directory, and read
