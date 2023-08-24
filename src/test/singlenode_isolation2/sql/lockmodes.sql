@@ -2,7 +2,8 @@
 CREATE TABLE lockmodes_datadir(a int, dir text);
 INSERT INTO lockmodes_datadir select 1,datadir from gp_segment_configuration where role='p' and content=-1;
 
-1: set optimizer = off;
+-- ORCA would upgrade lock to ExclusiveLock
+1: set optimizer = on;
 
 create or replace view show_locks_lockmodes as
   select locktype, mode, granted, relation::regclass
