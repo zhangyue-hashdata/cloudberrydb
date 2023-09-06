@@ -49,7 +49,7 @@ class ReplicaCheck(threading.Thread):
         self.ploc = segrow[4]
         self.mloc = segrow[5]
         self.datname = datname.decode()
-        self.relation_types = relation_types;
+        self.relation_types = relation_types
         self.result = False
         self.lock = threading.Lock()
 
