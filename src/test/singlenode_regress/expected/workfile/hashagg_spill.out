@@ -40,7 +40,6 @@ insert into testhagg select i,i,i,i from
 analyze testhagg;
 set statement_mem="1800";
 set work_mem='1800';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set gp_resqueue_print_operator_memory_limits=on;
 -- the number of rows returned by the query varies depending on the number of segments, so
 -- only print the first 10
@@ -82,7 +81,6 @@ insert into aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
 -- No spill with large statement memory 
 set statement_mem = '125MB';
 set work_mem='125MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 1) g;
  count  
 --------
@@ -92,7 +90,6 @@ select count(*) from (select i, count(*) from aggspill group by i,j having count
 -- Reduce the statement memory to induce spilling
 set statement_mem = '10MB';
 set work_mem='10MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select * from hashagg_spill.is_workfile_created('explain (analyze, verbose)
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 2) g');
  is_workfile_created 

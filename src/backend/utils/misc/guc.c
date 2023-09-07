@@ -2499,7 +2499,7 @@ static struct config_int ConfigureNamesInt[] =
 	},
 
 	{
-		{"work_mem", PGC_USERSET, DEPRECATED_OPTIONS,
+		{"work_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the maximum memory to be used for query workspaces."),
 			gettext_noop("This much memory can be used by each internal "
 						 "sort operation and hash table before switching to "

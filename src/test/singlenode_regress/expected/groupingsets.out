@@ -1734,7 +1734,6 @@ select array(select row(v.a,s1.*) from (select two,four, count(*) from onek grou
 -- test the knapsack
 set enable_indexscan = false;
 set work_mem = '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select unique1,
          count(two), count(four), count(ten),
@@ -1780,7 +1779,6 @@ explain (costs off)
 (10 rows)
 
 set work_mem = '384kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select unique1,
          count(two), count(four), count(ten),
@@ -1838,7 +1836,6 @@ update pg_class set reltuples = 10 where relname='bug_16784';
 ERROR:  permission denied: "pg_class" is a system catalog
 insert into bug_16784 select g/10, g from generate_series(1,40) g;
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set enable_sort = false;
 select * from
   (values (1),(2)) v(a),
@@ -2035,7 +2032,6 @@ WARNING:  autovacuum is not supported in Cloudberry
 update pg_class set reltuples = 10 where relname='gs_data_1';
 ERROR:  permission denied: "pg_class" is a system catalog
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Produce results with sorting.
 set enable_sort = true;
 set enable_hashagg = false;
@@ -2095,7 +2091,6 @@ select g100, g10, sum(g::numeric), count(*), max(g::text)
 from gs_data_1 group by cube (g1000, g100,g10);
 set enable_sort = true;
 set work_mem to default;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- GPDB_12_MERGE_FIXME: the following comparison query has an ORCA plan that
 -- relies on "IS NOT DISTINCT FROM" Hash Join, a variant that we likely have
 -- lost during the merge with upstream Postgres 12. Disable ORCA for this query

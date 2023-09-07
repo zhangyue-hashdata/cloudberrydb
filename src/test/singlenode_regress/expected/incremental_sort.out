@@ -36,7 +36,6 @@ limit 1;
 -- When work_mem is not enough to sort the entire table, incremental sort
 -- may be faster if individual groups still fit into work_mem.
 set work_mem to '2MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
 select * from (select * from tenk1 order by four) t order by four, ten;
              QUERY PLAN              
@@ -50,7 +49,6 @@ select * from (select * from tenk1 order by four) t order by four, ten;
 (6 rows)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 create table t(a integer, b integer);
 create or replace function explain_analyze_without_memory(query text)
 returns table (out_line text) language plpgsql
