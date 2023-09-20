@@ -230,6 +230,75 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
+    Scenario: gprecoverseg runs with given coordinator data directory option
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And user stops all mirror processes
+          And user can start transactions
+          And "COORDINATOR_DATA_DIRECTORY" environment variable is not set
+         Then the user runs utility "gprecoverseg" with coordinator data directory and "-F -a"
+          And gprecoverseg should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+          And all the segments are running
+          And the segments are synchronized
+
+    Scenario: gprecoverseg priorities given coordinator data directory over env option
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And user stops all mirror processes
+          And user can start transactions
+          And the environment variable "COORDINATOR_DATA_DIRECTORY" is set to "/tmp/"
+         Then the user runs utility "gprecoverseg" with coordinator data directory and "-F -a"
+          And gprecoverseg should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+          And all the segments are running
+          And the segments are synchronized
+
+    Scenario: gprecoverseg differential recovery displays rsync progress to the user
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg --differential -a -s"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+        And gprecoverseg should print "total size" to stdout for each mirror
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+        And gpAdminLogs directory has no "rsync*" files on all segment hosts
+        And gpAdminLogs directory has "gpsegrecovery*" files
+        And gpAdminLogs directory has "gpsegsetuprecovery*" files
+        And all the segments are running
+        And the segments are synchronized
+        And verify replication slot internal_wal_replication_slot is available on all the segments
+        And check segment conf: postgresql.conf
+
+    Scenario: gprecoverseg does not display rsync progress to the user when --no-progress option is specified
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And user stops all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg --differential -a -s --no-progress"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Initiating segment recovery. Upon completion, will start the successfully recovered segments" to stdout
+        And gprecoverseg should not print "total size is .*  speedup is .*" to stdout
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+        And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+        And gpAdminLogs directory has no "rsync*" files on all segment hosts
+        And gpAdminLogs directory has "gpsegrecovery*" files
+        And gpAdminLogs directory has "gpsegsetuprecovery*" files
+        And all the segments are running
+        And the segments are synchronized
+        And check segment conf: postgresql.conf
+
     Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running
