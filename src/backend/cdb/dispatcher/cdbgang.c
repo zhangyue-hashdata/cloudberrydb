@@ -81,6 +81,7 @@ CreateGangFunc pCreateGangFunc = cdbgang_createGang_async;
 
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
+static Oid	OldTempToastNamespace = InvalidOid;
 
 /*
  * cdbgang_createGang:
@@ -786,6 +787,7 @@ GpDropTempTables(void)
 	int			oldSessionId = 0;
 	int			newSessionId = 0;
 	Oid			dropTempNamespaceOid;
+	Oid			dropTempToastNamespaceOid;
 
 	/* No need to reset session or drop temp tables */
 	if (!NeedResetSession && OldTempNamespace == InvalidOid)
@@ -827,14 +829,20 @@ GpDropTempTables(void)
 	}
 
 	dropTempNamespaceOid = OldTempNamespace;
+	dropTempToastNamespaceOid = OldTempToastNamespace;
 	OldTempNamespace = InvalidOid;
+	OldTempToastNamespace = InvalidOid;
 	NeedResetSession = false;
 
 	if (dropTempNamespaceOid != InvalidOid)
 	{
+		MemoryContext oldcontext = CurrentMemoryContext;
+
 		PG_TRY();
 		{
 			DropTempTableNamespaceForResetSession(dropTempNamespaceOid);
+			/* drop pg_temp_N schema entry from pg_namespace */
+			DropTempTableNamespaceEntryForResetSession(dropTempNamespaceOid, dropTempToastNamespaceOid);
 		} PG_CATCH();
 		{
 			/*
@@ -847,7 +855,10 @@ GpDropTempTables(void)
 			}
 
 			EmitErrorReport();
+
+			MemoryContextSwitchTo(oldcontext);
 			FlushErrorState();
+			AbortCurrentTransaction();
 		} PG_END_TRY();
 	}
 }
@@ -855,7 +866,13 @@ GpDropTempTables(void)
 void
 resetSessionForPrimaryGangLoss(void)
 {
-	if (ProcCanSetMppSessionId())
+	/*
+ 	 * resetSessionForPrimaryGangLoss could be called twice in a transacion,
+ 	 * we need to use NeedResetSession to double check if we should do the
+ 	 * real work to avoid that OldTempToastNamespace be makred invalid before
+ 	 * cleaning up the temp namespace.
+ 	 */
+	if (ProcCanSetMppSessionId() && !NeedResetSession)
 	{
 		/*
 		 * Not too early.
@@ -871,6 +888,8 @@ resetSessionForPrimaryGangLoss(void)
 		 */
 		if (TempNamespaceOidIsValid())
 		{
+
+			OldTempToastNamespace = GetTempToastNamespace();
 			/*
 			 * Here we indicate we don't have a temporary table namespace
 			 * anymore so all temporary tables of the previous session will be
@@ -886,7 +905,10 @@ resetSessionForPrimaryGangLoss(void)
 				 gp_session_id);
 		}
 		else
+		{
 			OldTempNamespace = InvalidOid;
+			OldTempToastNamespace = InvalidOid;
+		}
 	}
 }
 
