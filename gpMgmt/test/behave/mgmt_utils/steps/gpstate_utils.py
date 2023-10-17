@@ -6,6 +6,7 @@ from gppylib.db import dbconn
 from gppylib.gparray import GpArray, ROLE_MIRROR
 from test.behave_utils.utils import check_stdout_msg, check_string_not_present_stdout
 from gppylib.commands.gp import get_coordinatordatadir
+from gppylib.commands import unix
 
 @then('a sample recovery_progress.file is created from saved lines')
 def impl(context):
@@ -23,6 +24,24 @@ def impl(context):
 def impl(context):
     gprecoverseg_lock_dir = os.path.join(get_coordinatordatadir() + '/gprecoverseg.lock')
     os.mkdir(gprecoverseg_lock_dir)
+
+@then('a sample {lock_file} directory is created using the background pid in coordinator_data_directory')
+@given('a sample {lock_file} directory is created using the background pid in coordinator_data_directory')
+def impl(context, lock_file):
+    if 'bg_pid' in context:
+        bg_pid = context.bg_pid
+        if not unix.check_pid(bg_pid):
+            raise Exception("The background process with PID {} is not running.".format(bg_pid))
+    else:
+        bg_pid = ""
+
+    lock_dir = os.path.join(get_coordinatordatadir() + '/{0}'.format(lock_file))
+    os.mkdir(lock_dir)
+
+    utility_pidfile = os.path.join(lock_dir, 'PID')
+
+    with open(utility_pidfile, 'w') as f:
+        f.write(bg_pid)
 
 @given('a sample recovery_progress.file is created with completed recoveries in gpAdminLogs')
 def impl(context):
