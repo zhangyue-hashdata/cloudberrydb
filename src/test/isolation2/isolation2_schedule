@@ -220,6 +220,8 @@ test: pg_basebackup_large_database_oid
 test: vacuum_progress_row
 test: vacuum_progress_column
 
+test: autostats_locking
+
 # this test contains some fault injection that might get mis-hit by autovacuum process,
 # so it needs to be run with autovacuum being disabled
 test: segwalrep/die_commit_pending_replication
