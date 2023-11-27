@@ -4215,3 +4215,18 @@ PARTITION BY RANGE (year)
   DEFAULT PARTITION outlying_years );
 
 drop table p3_sales;
+
+-- We should not allow subpartition by clause when creating empty partition hierarchy
+-- Should error out
+CREATE TABLE empty_partition_disallow_subpartition(i int, j int)
+PARTITION BY range(i) SUBPARTITION BY range(j);
+
+-- Check with other Partition syntax
+CREATE TABLE empty_partition_disallow_subpartition_2(i int, j int)
+    DISTRIBUTED BY (i) PARTITION BY range(i) SUBPARTITION BY range(j);
+
+-- Should work fine for empty hierarchy when subpartition is not specified
+CREATE TABLE empty_partition(i int, j int) PARTITION BY range(i);
+
+-- Check with other Partition syntax
+CREATE TABLE empty_partition2(i int, j int) DISTRIBUTED BY (i) PARTITION BY range(i);
