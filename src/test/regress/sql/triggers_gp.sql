@@ -127,3 +127,12 @@ CREATE TRIGGER before_ins_stmt_trig_gp BEFORE INSERT ON main_table_gp
 FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func_gp('before_ins_stmt');
 
 SET gp_enable_statement_trigger = off;
+-- Triggers on AO/CO table.
+-- Currently disabled.
+--
+create table trigtest_ao(a int) using ao_row;
+create table trigtest_co(a int) using ao_column;
+create trigger trig_ao after insert on trigtest_ao for each row execute function insert_notice_trig();
+create trigger trig_co after insert on trigtest_co for each row execute function insert_notice_trig();
+insert into trigtest_ao values(1);
+insert into trigtest_co values(1);
