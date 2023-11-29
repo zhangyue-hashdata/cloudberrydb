@@ -4937,6 +4937,10 @@ SELECT * FROM test_part_integrity;
 (4 rows)
 
 DROP TABLE test_part_integrity;
+-- Testing creating external table with replicated distribution
+-- Should report error
+CREATE WRITABLE EXTERNAL WEB TABLE ext_dist_repl(a int, b int) EXECUTE 'some command' FORMAT 'TEXT' DISTRIBUTED REPLICATED;
+ERROR:  external tables can't have DISTRIBUTED REPLICATED clause
 -- Testing altering the distribution policy of external tables.
 CREATE WRITABLE EXTERNAL WEB TABLE ext_w_dist(a int, b int) EXECUTE 'cat > @abs_srcdir@/data/ext_w_dist.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
 ALTER TABLE ext_w_dist SET WITH (reorganize=true); -- should error out if forcing reorganize
@@ -4961,6 +4965,13 @@ SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'ext_w_d
  p          | 
 (1 row)
 
+ALTER TABLE ext_w_dist SET DISTRIBUTED REPLICATED; -- ERROR
+ERROR:  SET DISTRIBUTED REPLICATED is not supported for external table
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT' DISTRIBUTED BY (a);
+ERROR:  readable external tables can't specify a DISTRIBUTED BY clause
+CREATE EXTERNAL WEB TABLE ext_r_dist(a int) EXECUTE 'printf ${GP_SEGMENT_ID}' FORMAT 'TEXT';
+ALTER TABLE ext_r_dist SET DISTRIBUTED BY (a); -- should error out altering readable external tables' distribution policy
+ERROR:  cannot set distribution policy of readable external table "ext_r_dist"
 -- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
 CREATE TABLE part_child (LIKE part_root);
