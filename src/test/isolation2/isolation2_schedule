@@ -53,6 +53,7 @@ test: resource_queue_deadlock
 # Test simple cancellation for resource queues and cancellation/deadlocks for
 # sessions with multiple portals.
 test: resource_queue_cancel resource_queue_multi_portal
+test: create_index_deadlock
 
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
