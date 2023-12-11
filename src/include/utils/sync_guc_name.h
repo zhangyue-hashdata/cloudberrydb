@@ -38,6 +38,7 @@
 		"debug_appendonly_print_visimap",
 		"debug_appendonly_use_no_toast",
 		"debug_discard_caches",
+		"debug_shareinput_xslice",
 		"default_table_access_method",
 		"default_index_access_method",
 		"default_tablespace",
