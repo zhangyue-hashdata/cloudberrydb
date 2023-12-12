@@ -3405,18 +3405,11 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->pathkeys = pathkeys;
 	pathnode->locus = locus;
 
-	/*
-	 * We can't extract these two values from the subplan, so we simple set
-	 * them to their worst case here.
-	 *
-	 * GPDB_96_MERGE_FIXME: we do have the subpath, at least if it's not a
-	 * shared cte
-	 */
-	pathnode->motionHazard = true;
-	pathnode->barrierHazard = true;
-	pathnode->rescannable = false;
 	pathnode->sameslice_relids = NULL;
 
+	/*
+	 * GPDB: we do have the subpath, at least if it's not a shared cte.
+	 */
 	if (subpath)
 	{
 		/* copy the cost estimates from the subpath */
@@ -3433,10 +3426,21 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 		/* CBDB_PARALLEL_FIXME: Is it correct to set parallel workers here? */
 		pathnode->parallel_workers = subpath->parallel_workers;
 
+		pathnode->motionHazard = subpath->motionHazard;
+		pathnode->rescannable = subpath->rescannable;
+		pathnode->barrierHazard = subpath->barrierHazard;
+
 		ctepath->subpath = subpath;
 	}
 	else
 	{
+		/*
+	 	 * We can't extract these two values from the subplan, so we simple set
+	 	 * them to their worst case here.
+		 */
+		pathnode->motionHazard = true;
+		pathnode->rescannable = false;
+		pathnode->barrierHazard = true;
 		/* Shared scan. We'll use the cost estimates from the CTE rel. */
 		cost_ctescan(pathnode, root, rel, pathnode->param_info);
 	}
