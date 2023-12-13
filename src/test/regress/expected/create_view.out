@@ -1953,7 +1953,9 @@ select (r).column2 from (select r from (values(1,2),(3,4)) r limit 1) ss;
          Output: (ROW("*VALUES*".column1, "*VALUES*".column2))
          ->  Values Scan on "*VALUES*"
                Output: ROW("*VALUES*".column1, "*VALUES*".column2)
-(6 rows)
+ Settings: optimizer = 'off'
+ Optimizer: Postgres query optimizer
+(8 rows)
 
 -- test pretty-print parenthesization rules, and SubLink deparsing
 create view tt26v as
@@ -1984,6 +1986,22 @@ select pg_get_viewdef('tt26v', true);
      ((v.x, v.y) <> ALL ( VALUES (1,2), (3,4))) AS c10,+
      ((v.x, v.y) <= ANY ( VALUES (1,2), (3,4))) AS c11 +
     FROM ( VALUES (1,2,3)) v(x, y, z);
+(1 row)
+
+-- test display negative operator of const-folder expression
+create table tdis(a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create view tdis_v1 as select a,b,c, -1::int from tdis group by 1,2,3,4;
+select pg_get_viewdef('tdis_v1', true);
+                   pg_get_viewdef                    
+-----------------------------------------------------
+  SELECT tdis.a,                                    +
+     tdis.b,                                        +
+     tdis.c,                                        +
+     - 1 AS "?column?"                              +
+    FROM tdis                                       +
+   GROUP BY tdis.a, tdis.b, tdis.c, ('-1'::integer);
 (1 row)
 
 -- clean up all the random objects we made above
@@ -2017,7 +2035,7 @@ drop cascades to view aliased_view_2
 drop cascades to view aliased_view_3
 drop cascades to view aliased_view_4
 DROP SCHEMA testviewschm2 CASCADE;
-NOTICE:  drop cascades to 74 other objects
+NOTICE:  drop cascades to 76 other objects
 DETAIL:  drop cascades to table t1
 drop cascades to view temporal1
 drop cascades to view temporal2
@@ -2092,3 +2110,5 @@ drop cascades to view tt23v
 drop cascades to view tt24v
 drop cascades to view tt25v
 drop cascades to view tt26v
+drop cascades to table tdis
+drop cascades to view tdis_v1

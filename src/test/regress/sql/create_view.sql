@@ -690,6 +690,11 @@ select x + y + z as c1,
 from (values(1,2,3)) v(x,y,z);
 select pg_get_viewdef('tt26v', true);
 
+-- test display negative operator of const-folder expression
+create table tdis(a int, b int, c int);
+create view tdis_v1 as select a,b,c, -1::int from tdis group by 1,2,3,4;
+select pg_get_viewdef('tdis_v1', true);
+
 -- clean up all the random objects we made above
 DROP SCHEMA temp_view_test CASCADE;
 DROP SCHEMA testviewschm2 CASCADE;
