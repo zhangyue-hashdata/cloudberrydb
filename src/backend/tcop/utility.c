@@ -1537,8 +1537,9 @@ ProcessUtilitySlow(ParseState *pstate,
 														   cstmt->partspec->gpPartDef,
 														   cstmt->partspec->subPartSpec,
 														   queryString, cstmt->options,
-														   cstmt->accessMethod,
-														   cstmt->attr_encodings, false);
+														   cstmt->accessMethod,	
+														   cstmt->attr_encodings,
+														   ORIGIN_GP_CLASSIC_CREATE_GEN);
 								stmts = list_concat(stmts, parts);
 							}
 

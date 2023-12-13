@@ -299,7 +299,8 @@ static void truncate_check_activity(Relation rel);
 static void RangeVarCallbackForTruncate(const RangeVar *relation,
 										Oid relId, Oid oldRelId, void *arg);
 static List *MergeAttributes(List *schema, List *supers, char relpersistence,
-							 bool is_partition, List **supconstr, bool gp_alter_part);
+							 bool is_partition, List **supconstr,
+							 CreateStmtOrigin origin);
 static void MergeAttributesIntoExisting(Relation child_rel, Relation parent_rel);
 static bool MergeCheckConstraint(List *constraints, char *name, Node *expr);
 static void MergeConstraintsIntoExisting(Relation child_rel, Relation parent_rel);
@@ -1006,7 +1007,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 							stmt->relation->relpersistence,
 							stmt->partbound != NULL,
 							&old_constraints,
-							stmt->gp_style_alter_part);
+							stmt->origin);
 	}
 	else
 	{
@@ -2963,7 +2964,7 @@ storage_name(char c)
  */
 List *
 MergeAttributes(List *schema, List *supers, char relpersistence,
-				bool is_partition, List **supconstr, bool gp_style_alter_part)
+				bool is_partition, List **supconstr, CreateStmtOrigin origin)
 {
 	List	   *inhSchema = NIL;
 	List	   *constraints = NIL;
@@ -3095,7 +3096,7 @@ MergeAttributes(List *schema, List *supers, char relpersistence,
 		 * already held by alter command, and when we generate CREATE 
 		 * STMT and execute them we have 2 reference instead on 1 here.
 		 */
-		if (is_partition && ((Gp_role != GP_ROLE_DISPATCH && !IS_SINGLENODE()) || !gp_style_alter_part))
+		if (is_partition && ((Gp_role != GP_ROLE_DISPATCH && !IS_SINGLENODE()) || origin != ORIGIN_GP_CLASSIC_ALTER_GEN))
 			CheckTableNotInUse(relation, "CREATE TABLE .. PARTITION OF");
 
 		/*
@@ -18165,7 +18166,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 		cs->ownerid = rel->rd_rel->relowner;
 		cs->tablespacename = get_tablespace_name(rel->rd_rel->reltablespace);
 		cs->buildAoBlkdir = false;
-		cs->gp_style_alter_part = false;
+		cs->origin = ORIGIN_NO_GEN;
 
 		if (isTmpTableAo &&
 			rel->rd_rel->relhasindex)

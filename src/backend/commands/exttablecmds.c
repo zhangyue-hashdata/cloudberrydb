@@ -120,7 +120,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	createStmt->distributedBy = createExtStmt->distributedBy; /* policy was set in transform */
 	createStmt->ownerid = userid;
 	createStmt->tags = createExtStmt->tags;
-	createStmt->gp_style_alter_part = false;
+	createStmt->origin = ORIGIN_NO_GEN;
 
 	switch (exttypeDesc->exttabletype)
 	{
