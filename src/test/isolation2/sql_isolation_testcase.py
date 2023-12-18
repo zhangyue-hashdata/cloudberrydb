@@ -28,6 +28,7 @@ import socket
 from optparse import OptionParser
 import traceback
 import select
+import shutil
 
 def is_digit(n):
     try:
@@ -94,7 +95,11 @@ class GlobalShellExecutor(object):
         self.v_cnt = 0
         # open pseudo-terminal to interact with subprocess
         self.master_fd, self.slave_fd = pty.openpty()
-        self.sh_proc = subprocess.Popen(['/bin/bash', '--noprofile', '--norc', '--noediting', '-i'],
+        bash_cmd = shutil.which('bash')
+        if bash_cmd is None:
+            raise GlobalShellExecutor.ExecutionError("cannot find bash command")
+
+        self.sh_proc = subprocess.Popen([bash_cmd, '--noprofile', '--norc', '--noediting', '-i'],
                                         stdin=self.slave_fd,
                                         stdout=self.slave_fd,
                                         stderr=self.slave_fd,
