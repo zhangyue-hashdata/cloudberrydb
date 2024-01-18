@@ -966,3 +966,9 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
+
+-- Test that left-anti-semi-join not-in works with netowrk types
+CREATE TABLE inverse (cidr inet);
+INSERT INTO inverse values ('192.168.100.199');
+explain SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));

@@ -2473,3 +2473,34 @@ drop table if exists bar_PT2;
 drop table if exists bar_PT3;
 drop table if exists bar_List_PT1;
 drop table if exists bar_List_PT2;
+-- Test that left-anti-semi-join not-in works with netowrk types
+CREATE TABLE inverse (cidr inet);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cidr' as the Cloudberry Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO inverse values ('192.168.100.199');
+explain SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324032.93 rows=1 width=4)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.93 rows=1 width=1)
+         ->  Result  (cost=0.00..1324032.93 rows=1 width=1)
+               Filter: (NOT CASE WHEN ((count((true))) > '0'::bigint) THEN CASE WHEN ((sum((CASE WHEN ((inverse_1.cidr <<= inverse.cidr) IS NULL) THEN 1 ELSE 0 END))) = (count((true)))) THEN NULL::boolean ELSE true END ELSE false END)
+               ->  GroupAggregate  (cost=0.00..1324032.93 rows=1 width=16)
+                     Group Key: inverse_1.cidr, inverse_1.ctid, inverse_1.gp_segment_id
+                     ->  Sort  (cost=0.00..1324032.93 rows=1 width=23)
+                           Sort Key: inverse_1.cidr, inverse_1.ctid, inverse_1.gp_segment_id
+                           ->  Nested Loop Left Join  (cost=0.00..1324032.93 rows=1 width=27)
+                                 Join Filter: ((inverse_1.cidr <<= inverse.cidr) IS NOT FALSE)
+                                 ->  Seq Scan on inverse inverse_1  (cost=0.00..431.00 rows=1 width=18)
+                                 ->  Materialize  (cost=0.00..431.00 rows=1 width=9)
+                                       ->  Result  (cost=0.00..431.00 rows=1 width=9)
+                                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Seq Scan on inverse  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+ ?column? 
+----------
+(0 rows)
+
