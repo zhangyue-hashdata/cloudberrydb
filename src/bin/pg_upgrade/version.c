@@ -470,22 +470,12 @@ old_11_check_for_sql_identifier_data_type_usage(ClusterInfo *cluster)
 								  output_path))
 	{
 		pg_log(PG_REPORT, "fatal\n");
-<<<<<<< HEAD
 		gp_fatal_log("Your installation contains the \"sql_identifier\" data type in user tables.\n"
 				 "The on-disk format for this data type has changed, so this\n"
 				 "cluster cannot currently be upgraded.  You can\n"
 				 "drop the problem columns and restart the upgrade.\n"
 				 "A list of the problem columns is in the file:\n"
 				 "    %s\n\n", output_path);
-=======
-		gp_fatal_log(
-				"| Your installation contains the \"sql_identifier\" data type in user tables\n"
-				"| and/or indexes.  The on-disk format for this data type has changed, so this\n"
-				"| cluster cannot currently be upgraded.  You can remove the problem tables or\n"
-				"| change the data type to \"name\" and restart the upgrade.\n"
-				"| A list of the problem columns is in the file:\n"
-				"|    %s\n\n", output_path);
->>>>>>> c9a80399044 (pg_upgrade: Use gp_fatal_log for check output)
 	}
 	else
 		check_ok();
