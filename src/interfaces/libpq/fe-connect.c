@@ -4261,6 +4261,8 @@ freePGconn(PGconn *conn)
 #endif
 	if (conn->gsslib)
 		free(conn->gsslib);
+	if (conn->gpconntype)
+		free(conn->gpconntype);
 	if (conn->connip)
 		free(conn->connip);
 #ifdef ENABLE_GSS
