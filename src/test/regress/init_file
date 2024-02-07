@@ -177,4 +177,7 @@ s/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/ The longest  es
 m/\(dbsize\.c\:\d+\)/
 s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 
+# ignore resource queue ids
+m/resource queue id: \d+/
+s/resource queue id: \d+/resource queue id: XXXX/
 -- end_matchsubs
