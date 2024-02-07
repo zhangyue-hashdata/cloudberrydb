@@ -519,6 +519,22 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 
 		resLockAcquireStatus = RQA_WAIT_ON_LOCK;
 		/*
+		 * First check if there would be any self-deadlock, before we start
+		 * waiting on the lock.
+		 */
+		if (ResCheckSelfDeadLock(lock, proclock, incrementSet))
+		{
+			LWLockRelease(ResQueueLock);
+			LWLockRelease(partitionLock);
+
+			SIMPLE_FAULT_INJECTOR("res_lock_acquire_self_deadlock_error");
+
+			ereport(ERROR,
+					(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
+						errmsg("deadlock detected, locking against self")));
+		}
+
+		/*
 		 * The requested lock will exhaust the limit for this resource queue,
 		 * so must wait.
 		 */
@@ -1247,8 +1263,6 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 
 	/*
 	 * Now sleep.
-	 *
-	 * NOTE: self-deadlocks will throw (do a non-local return).
 	 */
 	if (ResProcSleep(ExclusiveLock, locallock, incrementSet) != LIMIT_CHECK_OK)
 	{
@@ -1476,6 +1490,8 @@ ResRemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
  * increments. If this exceeds any of the thresholds for the queue then
  * we need to signal that a self deadlock is about to occurr - modulo some
  * footwork for overcommit-able queues.
+ *
+ * Note: ResQueueLock must already be held in Exclusive mode.
  */
 bool
 ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementSet)
@@ -1489,9 +1505,6 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 	bool		costThesholdOvercommitted = false;
 	bool		memoryThesholdOvercommitted = false;
 	bool		result = false;
-
-	/* Get the resource queue lock before checking the increments. */
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
 	/* Get the queue for this lock. */
 	queue = GetResQueueFromLock(lock);
@@ -1577,8 +1590,6 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 		}
 		/* our caller will throw an ERROR. */
 	}
-
-	LWLockRelease(ResQueueLock);
 
 	return result;
 }
