@@ -1040,7 +1040,7 @@ ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increment
 	{
 		Assert(limits[0].type == RES_COUNT_LIMIT);
 		elog(LOG,
-			 "Resource queue id: %d, count limit: %f, portal id: %u\n",
+			 "Resource queue id: %u, count limit: %f, portal id: %u\n",
 			 queue->queueid,
 			 limits[0].current_value,
 			 incrementSet->portalId);
@@ -1102,7 +1102,7 @@ ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increment
 ResQueue
 GetResQueueFromLock(LOCK *lock)
 {
-	Assert(LWLockHeldByMeInMode(ResQueueLock, LW_EXCLUSIVE));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	ResQueue	queue = ResQueueHashFind(GET_RESOURCE_QUEUEID_FOR_LOCK(lock));
 
@@ -1939,7 +1939,7 @@ ResQueueHashFind(Oid queueid)
 	bool		found;
 	ResQueueData *queue;
 
-	Assert(LWLockHeldByMeInMode(ResQueueLock, LW_EXCLUSIVE));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	queue = (ResQueueData *)
 		hash_search(ResQueueHash, (void *) &queueid, HASH_FIND, &found);
@@ -2683,7 +2683,7 @@ void DumpResQueueLockInfo(LOCALLOCK *locallock)
 		LOCK	 *lock = locallock->lock;
 		ResQueue  queue;
 
-		LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+		LWLockAcquire(ResQueueLock, LW_SHARED);
 		/* Get the queue for this lock. */
 		queue = GetResQueueFromLock(lock);
 		if (queue != NULL)
@@ -2691,7 +2691,7 @@ void DumpResQueueLockInfo(LOCALLOCK *locallock)
 			ResLimit limits  = queue->limits;
 			Assert(limits[0].type == RES_COUNT_LIMIT);
 			elog(LOG,
-				 "Resource queue id: %d, count limit: %f\n",
+				 "Resource queue id: %u, count limit: %f\n",
 				 queue->queueid,
 			limits[0].current_value);
 		}
