@@ -1123,6 +1123,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	char	   *tempname;
 	char	   *diffname;
 	TupleDesc	tupdesc;
+	TupleDesc   newHeapDesc;
 	bool		foundUniqueIndex;
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
@@ -1167,8 +1168,8 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 					 "(SELECT 1 FROM %s newdata2 WHERE newdata2.* IS NOT NULL "
 					 "AND newdata2.* OPERATOR(pg_catalog.*=) newdata.* "
 					 "AND newdata2.ctid OPERATOR(pg_catalog.<>) "
-					 "newdata.ctid and newdata2.gp_segment_id = "
-					 "newdata.gp_segment_id)",
+					 "newdata.ctid AND newdata2.gp_segment_id "
+					 "OPERATOR(pg_catalog.=) newdata.gp_segment_id)",
 					 tempname, tempname, tempname);
 	if (SPI_execute(querybuf.data, false, 1) != SPI_OK_SELECT)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
@@ -1196,23 +1197,33 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 * because you cannot create temp tables in SRO context.  For extra
 	 * paranoia, add the composite type column only after switching back to
 	 * SRO context.
+	 *
+	 * Greenplum doesn't store diffs in a composite type column, instead it
+	 * creates a similar table with the same distribution for performance
+	 * considerations.
 	 */
 	SetUserIdAndSecContext(relowner,
 						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
-
 	resetStringInfo(&querybuf);
 
 	appendStringInfo(&querybuf,
-					 "CREATE TEMP TABLE %s (tid pg_catalog.tid)",
-					 diffname);
+					 "CREATE TEMP TABLE %s (LIKE %s)",
+					 diffname, tempname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 	SetUserIdAndSecContext(relowner,
 						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf,
-					 "ALTER TABLE %s ADD COLUMN newdata %s",
-					 diffname, tempname);
+					 "ALTER TABLE %s ADD COLUMN tid pg_catalog.tid",
+					 diffname);
+	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
+		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
+
+	resetStringInfo(&querybuf);
+	appendStringInfo(&querybuf,
+					 "ALTER TABLE %s ADD COLUMN sid pg_catalog.int4",
+					 diffname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 
@@ -1220,7 +1231,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf,
 					 "INSERT INTO %s "
-					 "SELECT mv.ctid AS tid, mv.gp_segment_id as sid, newdata.* "
+					 "SELECT newdata.*, mv.ctid AS tid, mv.gp_segment_id as sid "
 					 "FROM %s mv FULL JOIN %s newdata ON (",
 					 diffname, matviewname, tempname);
 
@@ -1231,6 +1242,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	 * include all rows.
 	 */
 	tupdesc = matviewRel->rd_att;
+	newHeapDesc = tempRel->rd_att;
 	opUsedForQual = (Oid *) palloc0(sizeof(Oid) * relnatts);
 	foundUniqueIndex = false;
 
@@ -1372,18 +1384,27 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	appendStringInfo(&querybuf,
 					 "DELETE FROM %s mv WHERE ctid OPERATOR(pg_catalog.=) ANY "
 					 "(SELECT diff.tid FROM %s diff "
-					 "WHERE diff.tid = mv.ctid and diff.sid = mv.gp_segment_id and"
-	 				 " diff.tid IS NOT NULL)",
+					 "WHERE diff.tid IS NOT NULL "
+					 "AND diff.tid OPERATOR(pg_catalog.=) mv.ctid AND diff.sid "
+					 "OPERATOR(pg_catalog.=) mv.gp_segment_id)",
 					 matviewname, diffname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_DELETE)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 
 	/* Inserts go last. */
 	resetStringInfo(&querybuf);
+	appendStringInfo(&querybuf, "INSERT INTO %s SELECT", matviewname);
+	for (int i = 0; i < newHeapDesc->natts; ++i)
+	{
+		Form_pg_attribute attr = TupleDescAttr(newHeapDesc, i);
+		if (i == newHeapDesc->natts - 1)
+			appendStringInfo(&querybuf, " %s", NameStr(attr->attname));
+		else
+			appendStringInfo(&querybuf, " %s,", NameStr(attr->attname));
+	}
 	appendStringInfo(&querybuf,
-					 "INSERT INTO %s SELECT (diff.newdata).* "
 					 " FROM %s diff WHERE tid IS NULL",
-					 matviewname, diffname);
+					 diffname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_INSERT)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 
