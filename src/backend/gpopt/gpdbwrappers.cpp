@@ -2168,7 +2168,7 @@ gpdb::HasUpdateTriggers(Oid relid)
 {
 	GP_WRAP_START;
 	{
-		return has_update_triggers(relid);
+		return has_update_triggers(relid, true);
 	}
 	GP_WRAP_END;
 	return false;
