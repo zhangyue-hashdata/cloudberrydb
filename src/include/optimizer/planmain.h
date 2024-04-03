@@ -85,6 +85,9 @@ extern Plan *offload_entry_to_qe(PlannerInfo *root, Plan *plan, int sendslice_pa
 /* External use of these functions is deprecated: */
 extern Sort *make_sort_from_sortclauses(List *sortcls,
 						   Plan *lefttree);
+extern Sort *make_sort(Plan *lefttree, int numCols,
+					   AttrNumber *sortColIdx, Oid *sortOperators,
+					   Oid *collations, bool *nullsFirst);
 extern Agg *make_agg(List *tlist, List *qual,
 					 AggStrategy aggstrategy, AggSplit aggsplit,
 					 bool streaming,
