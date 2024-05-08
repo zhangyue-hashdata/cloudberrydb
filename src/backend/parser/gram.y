@@ -795,7 +795,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	LEADING LEAKPROOF LEAST LEFT LEVEL LIKE LIMIT LISTEN LOAD LOCAL
 	LOCALTIME LOCALTIMESTAMP LOCATION LOCK_P LOCKED LOCUS LOGGED
 
-	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_LIMIT
+	MAPPING MATCH MATERIALIZED MAXVALUE MEMORY_QUOTA
 	METHOD MINUTE_P MINVALUE MIN_COST MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NFC NFD NFKC NFKD NO NONE
@@ -1114,7 +1114,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MASTER
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
-			%nonassoc MEMORY_LIMIT
+			%nonassoc MEMORY_QUOTA
 			%nonassoc METHOD
 			%nonassoc MIN_COST
 			%nonassoc MINUTE_P
@@ -1784,9 +1784,9 @@ OptResourceGroupElem:
 				{
 					$$ = makeDefElem("cpuset", (Node *) makeString($2), @1);
 				}
-			| MEMORY_LIMIT SignedIconst
+			| MEMORY_QUOTA SignedIconst
 				{
-					$$ = makeDefElem("memory_limit", (Node *) makeInteger($2), @1);
+					$$ = makeDefElem("memory_quota", (Node *) makeInteger($2), @1);
 				}
 			| MIN_COST SignedIconst
 				{
@@ -19767,7 +19767,7 @@ unreserved_keyword:
 			| MATCH
 			| MATERIALIZED
 			| MAXVALUE
-			| MEMORY_LIMIT
+			| MEMORY_QUOTA
 			| METHOD
 			| MINUTE_P
 			| MINVALUE
@@ -20125,7 +20125,7 @@ PartitionIdentKeyword: ABORT_P
 			| MASTER
 			| MATCH
 			| MAXVALUE
-			| MEMORY_LIMIT
+			| MEMORY_QUOTA
 			| METHOD
 			| MINVALUE
 			| MISSING
@@ -20759,7 +20759,7 @@ bare_label_keyword:
 			| MATERIALIZED
 			| MAXVALUE
 			| MEDIAN
-			| MEMORY_LIMIT
+			| MEMORY_QUOTA
 			| METHOD
 			| MINVALUE
 			| MIN_COST
