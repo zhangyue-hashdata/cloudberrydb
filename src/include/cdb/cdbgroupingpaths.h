@@ -53,7 +53,6 @@ extern Path *cdb_prepare_path_for_hashed_agg(PlannerInfo *root,
 											 PathTarget *target,
 											 List *groupClause,
 											 List *rollups);
-
 extern List *get_common_group_tles(PathTarget *target,
 								   List *groupClause,
 								   List *rollups);
