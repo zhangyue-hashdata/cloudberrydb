@@ -39,6 +39,7 @@
 		"debug_appendonly_use_no_toast",
 		"debug_discard_caches",
 		"debug_shareinput_xslice",
+		"deadlock_timeout",
 		"default_table_access_method",
 		"default_index_access_method",
 		"default_tablespace",
