@@ -155,6 +155,7 @@ bool		enable_parallel_dedup_semi_reverse_join = true;
 int			gp_appendonly_insert_files = 0;
 int			gp_appendonly_insert_files_tuples_range = 0;
 int			gp_random_insert_segments = 0;
+int 		gp_appendonly_compaction_segfile_limit = 0;
 bool		gp_heap_require_relhasoids_match = true;
 bool		gp_local_distributed_cache_stats = false;
 bool		debug_xlog_record_read = false;
@@ -3398,6 +3399,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_appendonly_insert_files,
 		4, 0, 127,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_appendonly_compaction_segfile_limit", PGC_USERSET, DEVELOPER_OPTIONS,
+		gettext_noop("Sets the minimum number of segfiles that must always be available for inserts"),
+		gettext_noop("If the number of available segfiles for insert falls below this limit, "
+									"compaction will be avoided, to avoid too many segments going into AWAITING_DROP.")
+		},
+		&gp_appendonly_compaction_segfile_limit,
+		10, 0, 127,
 		NULL, NULL, NULL
 	},
 
