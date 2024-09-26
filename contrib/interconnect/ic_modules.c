@@ -46,10 +46,10 @@ MotionIPCLayer tcp_ipc_layer = {
     .RecvTupleChunkFrom = RecvTupleChunkFromTCP,
     .RecvTupleChunk = RecvTupleChunkTCP,
 
-    .DirectPutRxBuffer = NULL,
+    .DirectPutRxBuffer = DirectPutRxBufferTCP,
 
     .DeregisterReadInterest = DeregisterReadInterestTCP,
-    .GetActiveMotionConns = NULL,
+    .GetActiveMotionConns = GetActiveMotionConnsTCP,
 
     .GetTransportDirectBuffer = GetTransportDirectBuffer,
     .PutTransportDirectBuffer = PutTransportDirectBuffer,
@@ -83,10 +83,10 @@ MotionIPCLayer proxy_ipc_layer = {
     .RecvTupleChunkFrom = RecvTupleChunkFromTCP,
     .RecvTupleChunk = RecvTupleChunkTCP,
 
-    .DirectPutRxBuffer = NULL,
+    .DirectPutRxBuffer = DirectPutRxBufferTCP,
 
     .DeregisterReadInterest = DeregisterReadInterestTCP,
-    .GetActiveMotionConns = NULL,
+    .GetActiveMotionConns = GetActiveMotionConnsTCP,
 
     .GetTransportDirectBuffer = GetTransportDirectBuffer,
     .PutTransportDirectBuffer = PutTransportDirectBuffer,
@@ -146,20 +146,7 @@ _PG_init(void)
 				 errmsg("could not load interconnect outside process shared preload")));
     }
 
-    switch(Gp_interconnect_type) {
-        case INTERCONNECT_TYPE_TCP:
-            CurrentMotionIPCLayer = &tcp_ipc_layer;
-            break;
-        case INTERCONNECT_TYPE_UDPIFC:
-            CurrentMotionIPCLayer = &udpifc_ipc_layer;
-            break;
-        case INTERCONNECT_TYPE_PROXY:
-            CurrentMotionIPCLayer = &proxy_ipc_layer;
-            break;    
-        default:
-            ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not decide interconnect type")));
-    }
-    
+	RegisterIPCLayerImpl(&tcp_ipc_layer);
+	RegisterIPCLayerImpl(&udpifc_ipc_layer);
+	RegisterIPCLayerImpl(&proxy_ipc_layer);
 }
