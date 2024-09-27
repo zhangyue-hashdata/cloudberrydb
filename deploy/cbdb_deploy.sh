@@ -15,8 +15,8 @@ then
 fi
 
 home_dir=/home/${user}
-mapped_dir=${home_dir}/workspace/cbdb
-working_dir=${home_dir}/workspace/cbdb_dev
+#mapped_dir=${home_dir}/workspace/cbdb
+working_dir=${home_dir}/workspace/cbdb
 install_dir=${home_dir}/install
 
 function cbdb_build() {
@@ -28,16 +28,16 @@ function cbdb_build() {
       rm -rf ${install_dir}
     fi
 
-    if [ -d ${working_dir} ]
-    then
-      rm -rf ${working_dir}
-    fi
+#    if [ -d ${working_dir} ]
+#    then
+#      rm -rf ${working_dir}
+#    fi
 
     #copy working directory
     echo "[CBDB build] init compile environment..."
     mkdir ${install_dir}
-    mkdir ${working_dir}
-    cp -rf ${mapped_dir}/* ${working_dir}/
+#    mkdir ${working_dir}
+#    cp -rf ${mapped_dir}/* ${working_dir}/
 
     #init compilation environment params
     source ${working_dir}/deploy/cbdb_env.sh
@@ -56,23 +56,24 @@ function cbdb_build() {
     #do compile configuration
     echo "[CBDB build] start to init configuraiton for code compile..."
     CFLAGS=-O0 CXXFLAGS='-O0 -std=c++14' ./configure --prefix=${install_dir}/cbdb --enable-debug --enable-cassert --enable-tap-tests --with-gssapi --with-libxml --with-quicklz --with-pythonsrc-ext --with-openssl
+    #CFLAGS=-O0 CXXFLAGS='-O0 -std=c++14'  CPPFLAGS='-DGP_SERIALIZATION_DEBUG=1' ./configure --prefix=${install_dir}/cbdb --enable-debug --enable-cassert --enable-orca --with-python
 
     #do compile
     echo "[CBDB build] start to compile binary file..."
-    make -sj 12 install
+    make -sj8 install
 
-    #start cluster
-    source ~/install/cbdb/greenplum_path.sh
-    export PGHOST=`hostname`
-    cd ${working_dir}/gpAux/gpdemo && make
-
-    #export preinstall parameters
-    source ${working_dir}/deploy/cbdb_env.sh
-
-    #download dbgen
-    cd ~/workspace
-    curl https://artifactory.hashdata.xyz/artifactory/greenplum/cbdb/tool/dbgen/dbgen.tar.gz -o dbgen.tar.gz
-    tar xzf dbgen.tar.gz -C $GPHOME/bin
+#    #start cluster
+#    source ~/install/cbdb/greenplum_path.sh
+#    export PGHOST=`hostname`
+#    cd ${working_dir}/gpAux/gpdemo && make
+#
+#    #export preinstall parameters
+#    source ${working_dir}/deploy/cbdb_env.sh
+#
+#    #download dbgen
+#    cd ~/workspace
+#    curl https://artifactory.hashdata.xyz/artifactory/greenplum/cbdb/tool/dbgen/dbgen.tar.gz -o dbgen.tar.gz
+#    tar xzf dbgen.tar.gz -C $GPHOME/bin
 }
 
 function cbdb_run() {

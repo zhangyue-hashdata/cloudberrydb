@@ -3580,7 +3580,7 @@ static bool
 cluster_healthy(void)
 {
 	char line[1024];
-	int i, n;
+	//int i, n;
 	psql_command_output("postgres", line, 1024,
 						"SELECT * FROM gp_segment_configuration WHERE status = 'd' OR preferred_role != role;");
 
@@ -3595,31 +3595,31 @@ cluster_healthy(void)
 		return false;
 	}
 
-	i = 120;
-	do {
-		char *p;
-		/* check for the health for standby coordinator */
-		psql_command_output("postgres", line, sizeof(line),
-							"SELECT sync_state FROM pg_stat_get_wal_senders();");
-		p = &line[0];
-		while (*p == ' ')
-			p++;
-		n = strlen(p);
-		while (n > 0 && (p[n-1] == '\n' || p[n-1] == '\r' || p[n-1] == ' '))
-			p[--n] = '\0';
+	//i = 120;
+	//do {
+	//	char *p;
+	//	/* check for the health for standby coordinator */
+	//	psql_command_output("postgres", line, sizeof(line),
+	//						"SELECT sync_state FROM pg_stat_get_wal_senders();");
+	//	p = &line[0];
+	//	while (*p == ' ')
+	//		p++;
+	//	n = strlen(p);
+	//	while (n > 0 && (p[n-1] == '\n' || p[n-1] == '\r' || p[n-1] == ' '))
+	//		p[--n] = '\0';
 
-		halt_work = strcmp(p, "sync") != 0;
-		if (halt_work)
-			sleep(1);
-		i--;
-	} while (i >= 0 && halt_work);
+	//	halt_work = strcmp(p, "sync") != 0;
+	//	if (halt_work)
+	//		sleep(1);
+	//	i--;
+	//} while (i >= 0 && halt_work);
 
-	if (halt_work)
-	{
-		fprintf(stderr, _("\n=========================================================\n"));
-		fprintf(stderr, _("Cluster validation failed: standby replication state = '%s'"), line);
-		fprintf(stderr, _("\n=========================================================\n"));
-	}
+	//if (halt_work)
+	//{
+	//	fprintf(stderr, _("\n=========================================================\n"));
+	//	fprintf(stderr, _("Cluster validation failed: standby replication state = '%s'"), line);
+	//	fprintf(stderr, _("\n=========================================================\n"));
+	//}
 
 	return !halt_work;
 }

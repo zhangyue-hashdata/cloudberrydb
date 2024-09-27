@@ -202,6 +202,38 @@ static void IsPagerNeeded(const printTableContent *cont, int extra_lines, bool e
 static void print_aligned_vertical(const printTableContent *cont,
 								   FILE *fout, bool is_pager);
 
+static unsigned char *
+convert_escape_1b(unsigned char *s)
+{
+   /* shortcut path */
+   char *found = strcasestr((char *)s, "\\x1b");
+   if (!found)
+       return s;
+
+   int len = strlen((const char *)s);
+   char *start = (char *)s;
+   char *end   = (char *)s + len;
+   char *save  = (char *)s;
+   do {
+       for (int i = 0; i < found - start; ++i)
+           *(save+i) = *(start+i);
+       save += (found - start);
+       *save++ = '\x1b';
+       start = found + 4;
+   } while ((found = strcasestr(start, "\\x1b")));
+
+   // memcpy() is not appropriate to move part of string when src and dst are overlapped
+   //(end - start) ? (void)memcpy(save, start, end - start + 1) : (void)(*save = '\0');
+   if (end - start > 0)
+   {
+       for (int i = 0; i < end - start + 1; ++i)
+           *(save+i) = *(start+i);
+   }
+   else
+       *save = '\0';
+
+   return s;
+}
 
 /* Count number of digits in integral part of number */
 static int
@@ -598,6 +630,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 	printTextLineWrap *wrap;	/* Wrap status for each column */
 	int			output_columns = 0; /* Width of interactive console */
 	bool		is_local_pager = false;
+	bool		is_explain = false;
 
 	if (cancel_pressed)
 		return;
@@ -908,6 +941,12 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 					struct lineptr *this_line = col_lineptrs[i] + curr_nl_line;
 					unsigned int nbspace;
 
+					if (strcasestr((const char *)this_line->ptr, "query plan"))
+					{
+						is_explain = true;
+						this_line->ptr = convert_escape_1b(this_line->ptr);
+					}
+
 					if (opt_border != 0 ||
 						(!format->wrap_right_border && i > 0))
 						fputs(curr_nl_line ? format->header_nl_left : " ",
@@ -991,6 +1030,9 @@ print_aligned_text(const printTableContent *cont, FILE *fout, bool is_pager)
 				int			chars_to_output = width_wrap[j];
 				bool		finalspaces = (opt_border == 2 ||
 										   (col_count > 0 && j < col_count - 1));
+
+				if (is_explain)
+					this_line->ptr = convert_escape_1b(this_line->ptr);
 
 				/* Print left-hand wrap or newline mark */
 				if (opt_border != 0)
