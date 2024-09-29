@@ -2881,7 +2881,7 @@ typedef struct AttrFilter
 	AttrNumber		rattno;	/* attr no in hash node */
 	AttrNumber		lattno;	/* if target is seqscan, attr no in relation */
 
-	bloom_filter	*bf;
+	bloom_filter	*blm_filter;
 	Datum			min;
 	Datum			max;
 } AttrFilter;

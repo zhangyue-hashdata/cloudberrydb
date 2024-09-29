@@ -419,13 +419,15 @@ ExecSeqScanInitializeWorker(SeqScanState *node,
 static bool
 PassByBloomFilter(SeqScanState *node, TupleTableSlot *slot)
 {
-	Datum val;
-	bool isnull;
-
+	ScanKey	sk;
+	Datum	val;
+	bool	isnull;
 	ListCell *lc;
+	bloom_filter *blm_filter;
+
 	foreach (lc, node->filters)
 	{
-		ScanKey sk = lfirst(lc);
+		sk = lfirst(lc);
 		if (sk->sk_flags != SK_BLOOM_FILTER)
 			continue;
 
@@ -433,34 +435,37 @@ PassByBloomFilter(SeqScanState *node, TupleTableSlot *slot)
 		if (isnull)
 			continue;
 
-		bloom_filter *bf = (bloom_filter *)DatumGetPointer(sk->sk_argument);
-		if (bloom_lacks_element(bf, (unsigned char *)&val, sizeof(Datum)))
+		blm_filter = (bloom_filter *)DatumGetPointer(sk->sk_argument);
+		if (bloom_lacks_element(blm_filter, (unsigned char *)&val, sizeof(Datum)))
 			return false;
 	}
 
 	return true;
 }
 
-ScanKey
+/*
+ * Convert the list of ScanKey to the array, and append an emtpy ScanKey as
+ * the end flag of the array.
+ */
+static ScanKey
 ScanKeyListToArray(List *keys, int *num)
 {
-	ScanKey rs;
+	ScanKey sk;
 
-	if (!num)
+	if (list_length(keys) == 0)
 		return NULL;
 
+	Assert(num);
 	*num = list_length(keys);
-	if (*num == 0)
-		return NULL;
 
-	rs = (ScanKey)palloc0(sizeof(ScanKeyData) * (*num + 1));
+	sk = (ScanKey)palloc(sizeof(ScanKeyData) * (*num + 1));
 	for (int i = 0; i < *num; ++i)
-		memcpy(&rs[i], list_nth(keys, i), sizeof(ScanKeyData));
+		memcpy(&sk[i], list_nth(keys, i), sizeof(ScanKeyData));
 
 	/*
 	 * SK_EMPYT means the end of the array of the ScanKey
 	 */
-	rs[*num].sk_flags = SK_EMPYT;
+	sk[*num].sk_flags = SK_EMPYT;
 
-	return rs;
+	return sk;
 }

@@ -4159,44 +4159,46 @@ get_hash_mem(void)
 void
 PushdownRuntimeFilter(HashState *node)
 {
-	ListCell *lc;
-	ScanKey sk;
+	ListCell	*lc;
+	List		*scankeys;
+	ScanKey		sk;
+	AttrFilter	*attr_filter;
 
 	foreach (lc, node->filters)
 	{
-		List *scankeys = NIL;
+		scankeys = NIL;
 
-		AttrFilter *af = lfirst(lc);
-		if (!IsA(af->target, SeqScanState) || af->empty)
+		attr_filter = lfirst(lc);
+		if (!IsA(attr_filter->target, SeqScanState) || attr_filter->empty)
 			continue;
 
 		/* bloom filter */
 		sk = (ScanKey)palloc0(sizeof(ScanKeyData));
 		sk->sk_flags    = SK_BLOOM_FILTER;
-		sk->sk_attno    = af->lattno;
+		sk->sk_attno    = attr_filter->lattno;
 		sk->sk_subtype  = INT8OID;
-		sk->sk_argument = PointerGetDatum(af->bf);
+		sk->sk_argument = PointerGetDatum(attr_filter->blm_filter);
 		scankeys = lappend(scankeys, sk);
 
 		/* range filter */
 		sk = (ScanKey)palloc0(sizeof(ScanKeyData));
 		sk->sk_flags    = 0;
-		sk->sk_attno    = af->lattno;
+		sk->sk_attno    = attr_filter->lattno;
 		sk->sk_strategy = BTGreaterEqualStrategyNumber;
 		sk->sk_subtype  = INT8OID;
-		sk->sk_argument = af->min;
+		sk->sk_argument = attr_filter->min;
 		scankeys = lappend(scankeys, sk);
 
 		sk = (ScanKey)palloc0(sizeof(ScanKeyData));
 		sk->sk_flags    = 0;
-		sk->sk_attno    = af->lattno;
+		sk->sk_attno    = attr_filter->lattno;
 		sk->sk_strategy = BTLessEqualStrategyNumber;
 		sk->sk_subtype  = INT8OID;
-		sk->sk_argument = af->max;
+		sk->sk_argument = attr_filter->max;
 		scankeys = lappend(scankeys, sk);
 
 		/* append new runtime filters to target node */
-		SeqScanState *sss = castNode(SeqScanState, af->target);
+		SeqScanState *sss = castNode(SeqScanState, attr_filter->target);
 		sss->filters = list_concat(sss->filters, scankeys);
 	}
 }
@@ -4204,41 +4206,46 @@ PushdownRuntimeFilter(HashState *node)
 static void
 BuildRuntimeFilter(HashState *node, TupleTableSlot *slot)
 {
-	ListCell *lc;
+	Datum val;
+	bool  isnull;
+	ListCell	*lc;
+	AttrFilter	*attr_filter;
+
 	foreach (lc, node->filters)
 	{
-		Datum val;
-		bool isnull;
+		attr_filter = (AttrFilter *) lfirst(lc);
 
-		AttrFilter *af = (AttrFilter *) lfirst(lc);
-		val = slot_getattr(slot, af->rattno, &isnull);
+		val = slot_getattr(slot, attr_filter->rattno, &isnull);
 		if (isnull)
 			continue;
 
-		af->empty = false;
+		attr_filter->empty = false;
 
-		if ((int64_t)val < (int64_t)af->min)
-			af->min = val;
-		if ((int64_t)val > (int64_t)af->max)
-			af->max = val;
+		if ((int64_t)val < (int64_t)attr_filter->min)
+			attr_filter->min = val;
 
-		if (af->bf)
-			bloom_add_element(af->bf, (unsigned char *)&val, sizeof(Datum));
+		if ((int64_t)val > (int64_t)attr_filter->max)
+			attr_filter->max = val;
+
+		if (attr_filter->blm_filter)
+			bloom_add_element(attr_filter->blm_filter, (unsigned char *)&val, sizeof(Datum));
 	}
 }
 
 void
 FreeRuntimeFilter(HashState *node)
 {
+	ListCell	*lc;
+	AttrFilter	*attr_filter;
+
 	if (!node->filters)
 		return;
 
-	ListCell *lc;
 	foreach (lc, node->filters)
 	{
-		AttrFilter *af = lfirst(lc);
-		if (af->bf)
-			bloom_free(af->bf);
+		attr_filter = lfirst(lc);
+		if (attr_filter->blm_filter)
+			bloom_free(attr_filter->blm_filter);
 	}
 
 	list_free_deep(node->filters);
@@ -4248,17 +4255,21 @@ FreeRuntimeFilter(HashState *node)
 void
 ResetRuntimeFilter(HashState *node)
 {
+	ListCell		*lc;
+	AttrFilter		*attr_filter;
+	SeqScanState	*sss;
+
 	if (!node->filters)
 		return;
 
-	ListCell *lc;
 	foreach (lc, node->filters)
 	{
-		AttrFilter *af = lfirst(lc);
-		af->empty  = true;
-		if (IsA(af->target, SeqScanState))
+		attr_filter = lfirst(lc);
+		attr_filter->empty  = true;
+
+		if (IsA(attr_filter->target, SeqScanState))
 		{
-			SeqScanState *sss = castNode(SeqScanState, af->target);
+			sss = castNode(SeqScanState, attr_filter->target);
 			if (sss->filters)
 			{
 				list_free_deep(sss->filters);
@@ -4266,11 +4277,12 @@ ResetRuntimeFilter(HashState *node)
 			}
 		}
 
-		if (af->bf)
-			bloom_free(af->bf);
-		af->bf     = bloom_create_aggresive(node->ps.plan->plan_rows,
-		                                    work_mem, random());
-		af->min    = LLONG_MAX;
-		af->max    = LLONG_MIN;
+		if (attr_filter->blm_filter)
+			bloom_free(attr_filter->blm_filter);
+
+		attr_filter->blm_filter     = bloom_create_aggresive(node->ps.plan->plan_rows,
+		                                             work_mem, random());
+		attr_filter->min    = LLONG_MAX;
+		attr_filter->max    = LLONG_MIN;
 	}
 }

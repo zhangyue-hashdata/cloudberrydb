@@ -2182,30 +2182,36 @@ ExecHashJoinInitializeWorker(HashJoinState *state,
 void
 CreateRuntimeFilter(HashJoinState* hjstate)
 {
-	ListCell *lc;
 	AttrNumber lattno, rattno;
+	Expr		*expr;
+	JoinType	jointype;
+	HashJoin	*hj;
+	HashState	*hstate;
+	PlanState	*target;
+	AttrFilter	*attr_filter;
+	ListCell	*lc;
 
 	/*
 	 * Only applicatable for inner, right and semi join,
 	 */
-	JoinType jointype = hjstate->js.jointype;
+	jointype = hjstate->js.jointype;
 	if (jointype != JOIN_INNER
 		&& jointype != JOIN_RIGHT
 		&& jointype != JOIN_SEMI
 	   )
 		return;
 
-	HashState *hstate = castNode(HashState, innerPlanState(hjstate));
+	hstate = castNode(HashState, innerPlanState(hjstate));
 	hstate->filters = NIL;
 
 	/*
 	 * check and initialize the runtime filter for all hash conds in
 	 * hj->hashclauses
 	 */
-	HashJoin *hj = castNode(HashJoin, hjstate->js.ps.plan);
+	hj = castNode(HashJoin, hjstate->js.ps.plan);
 	foreach (lc, hj->hashclauses)
 	{
-		Expr *expr = (Expr *)lfirst(lc);
+		expr = (Expr *)lfirst(lc);
 
 		if (!IsEqualOp(expr))
 			continue;
@@ -2218,31 +2224,34 @@ CreateRuntimeFilter(HashJoinState* hjstate)
 		if (lattno < 1 || rattno < 1)
 			continue;
 
-		PlanState *target = FindTargetAttr(hjstate, lattno, &lattno);
+		target = FindTargetAttr(hjstate, lattno, &lattno);
 		if (lattno == -1 || target == NULL || IsA(target, HashJoinState))
 			continue;
 		Assert(IsA(target, SeqScanState));
 
-		AttrFilter *af = CreateAttrFilter(target, lattno, rattno,
-										  hstate->ps.plan->plan_rows);
-		if (af->bf)
-			hstate->filters = lappend(hstate->filters, af);
+		attr_filter = CreateAttrFilter(target, lattno, rattno,
+									   hstate->ps.plan->plan_rows);
+		if (attr_filter->blm_filter)
+			hstate->filters = lappend(hstate->filters, attr_filter);
 		else
-			pfree(af);
+			pfree(attr_filter);
 	}
 }
 
 static bool
 IsEqualOp(Expr *expr)
 {
+	Oid funcid = InvalidOid;
+
 	if (!IsA(expr, OpExpr) && !IsA(expr, FuncExpr))
 		return false;
 
-	Oid funcid = InvalidOid;
 	if (IsA(expr, OpExpr))
 		funcid = ((OpExpr *)expr)->opfuncid;
-	if (IsA(expr, FuncExpr))
+	else if (IsA(expr, FuncExpr))
 		funcid = ((FuncExpr *)expr)->funcid;
+	else
+		return false;
 
 	if (funcid == F_INT2EQ  || funcid == F_INT4EQ  || funcid == F_INT8EQ
 		|| funcid == F_INT24EQ || funcid == F_INT42EQ
@@ -2250,8 +2259,8 @@ IsEqualOp(Expr *expr)
 		|| funcid == F_INT48EQ || funcid == F_INT84EQ
 	   )
 		return true;
-	else
-		return false;
+
+	return false;
 }
 
 /*
@@ -2263,23 +2272,28 @@ IsEqualOp(Expr *expr)
 static bool
 CheckEqualArgs(Expr *expr, AttrNumber *lattno, AttrNumber *rattno)
 {
+	Var		*var;
+	bool	match;
+	List	*args;
+	ListCell *lc;
+
 	if (lattno == NULL || rattno == NULL)
 		return false;
 
 	if (!IsA(expr, OpExpr) && !IsA(expr, FuncExpr))
 		return false;
 
-	List *args = NIL;
 	if (IsA(expr, OpExpr))
 		args = ((OpExpr *)expr)->args;
-	if (IsA(expr, FuncExpr))
+	else if (IsA(expr, FuncExpr))
 		args = ((FuncExpr *)expr)->args;
+	else
+		return false;
 
 	if (!args || list_length(args) != 2)
 		return false;
 
-	ListCell *lc;
-	bool match = false;
+	match = false;
 	foreach (lc, args)
 	{
 		match = false;
@@ -2287,15 +2301,11 @@ CheckEqualArgs(Expr *expr, AttrNumber *lattno, AttrNumber *rattno)
 		if (!IsA(lfirst(lc), Var))
 			break;
 
-		Var *var = lfirst(lc);
+		var = lfirst(lc);
 		if (var->varno == INNER_VAR)
-		{
 			*rattno = var->varattno;
-		}
 		else if (var->varno == OUTER_VAR)
-		{
 			*lattno = var->varattno;
-		}
 		else
 			break;
 
@@ -2315,12 +2325,15 @@ CheckEqualArgs(Expr *expr, AttrNumber *lattno, AttrNumber *rattno)
 static PlanState *
 FindTargetAttr(HashJoinState *hjstate, AttrNumber attno, AttrNumber *lattno)
 {
+	Var *var;
+	PlanState *child, *parent;
 	TargetEntry *te;
 
-	PlanState *parent = (PlanState *)hjstate;
-	PlanState *child  = outerPlanState(hjstate);
+	parent = (PlanState *)hjstate;
+	child  = outerPlanState(hjstate);
 	Assert(child);
 
+	*lattno = -1;
 	while (child)
 	{
 		/* target is seqscan */
@@ -2328,24 +2341,16 @@ FindTargetAttr(HashJoinState *hjstate, AttrNumber attno, AttrNumber *lattno)
 		{
 			te = (TargetEntry *)list_nth(child->plan->targetlist, attno - 1);
 			if (!IsA(te->expr, Var))
-			{
-				*lattno = -1;
 				return NULL;
-			}
-			else
-			{
-				Var *var = castNode(Var, te->expr);
 
-				/* system column is not allowed */
-				if (var->varattno <= 0)
-				{
-					*lattno = -1;
-					return NULL;
-				}
+			var = castNode(Var, te->expr);
 
-				*lattno = var->varattno;
-				return child;
-			}
+			/* system column is not allowed */
+			if (var->varattno <= 0)
+				return NULL;
+
+			*lattno = var->varattno;
+			return child;
 		}
 
 		/*
@@ -2354,34 +2359,24 @@ FindTargetAttr(HashJoinState *hjstate, AttrNumber attno, AttrNumber *lattno)
 		 *     seqscan on t1, t1 is replicated table
 		 */
 		if (!IsA(child, HashJoinState) && !IsA(child, ResultState))
-		{
-			*lattno = -1;
 			return NULL;
-		}
 
 		/* child is hashjoin or result node */
 		te = (TargetEntry *)list_nth(child->plan->targetlist, attno - 1);
 		if (!IsA(te->expr, Var))
-		{
-			*lattno = -1;
 			return NULL;
-		}
-		else
-		{
-			Var *var = castNode(Var, te->expr);
-			if (var->varno == INNER_VAR)
-			{
-				*lattno = -1;
-				return NULL;
-			}
-			attno = var->varattno;
-		}
 
+		var = castNode(Var, te->expr);
+		if (var->varno == INNER_VAR)
+			return NULL;
+
+		attno = var->varattno;
+
+		/* find at child node */
 		parent = child;
 		child  = outerPlanState(parent);
 	}
 
-	*lattno = -1;
 	return NULL;
 }
 
@@ -2389,15 +2384,15 @@ static AttrFilter*
 CreateAttrFilter(PlanState *target, AttrNumber lattno, AttrNumber rattno,
 				 double plan_rows)
 {
-	AttrFilter *af = palloc0(sizeof(AttrFilter));
-	af->empty  = true;
-	af->target = target;
+	AttrFilter *attr_filter = palloc0(sizeof(AttrFilter));
+	attr_filter->empty  = true;
+	attr_filter->target = target;
 
-	af->lattno = lattno;
-	af->rattno = rattno;
-	af->bf     = bloom_create_aggresive(plan_rows, work_mem, random());
-	af->min    = LLONG_MAX;
-	af->max    = LLONG_MIN;
+	attr_filter->lattno = lattno;
+	attr_filter->rattno = rattno;
+	attr_filter->blm_filter     = bloom_create_aggresive(plan_rows, work_mem, random());
+	attr_filter->min    = LLONG_MAX;
+	attr_filter->max    = LLONG_MIN;
 
-	return af;
+	return attr_filter;
 }
