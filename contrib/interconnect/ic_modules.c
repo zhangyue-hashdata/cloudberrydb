@@ -27,6 +27,7 @@ PG_MODULE_MAGIC;
 
 MotionIPCLayer tcp_ipc_layer = {
     .ic_type = INTERCONNECT_TYPE_TCP,
+    .type_name = "tcp",
 
     .GetMaxTupleChunkSize = GetMaxTupleChunkSizeTCP,
     .GetListenPort = GetListenPortTCP,
@@ -64,6 +65,7 @@ MotionIPCLayer tcp_ipc_layer = {
 
 MotionIPCLayer proxy_ipc_layer = {
     .ic_type = INTERCONNECT_TYPE_PROXY,
+    .type_name = "proxy",
 
     .GetMaxTupleChunkSize = GetMaxTupleChunkSizeTCP,
     .GetListenPort = GetListenPortTCP,
@@ -102,6 +104,7 @@ MotionIPCLayer proxy_ipc_layer = {
 
 MotionIPCLayer udpifc_ipc_layer = {
     .ic_type = INTERCONNECT_TYPE_UDPIFC,
+    .type_name = "udpifc",
 
     .GetMaxTupleChunkSize = GetMaxTupleChunkSizeUDP,
     .GetListenPort = GetListenPortUDP,

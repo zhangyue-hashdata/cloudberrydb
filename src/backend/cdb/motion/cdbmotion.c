@@ -34,7 +34,7 @@ MotionIPCLayer *CurrentMotionIPCLayer = NULL;
 
 #define IPCLAYER_CANDIDATE_NUM 3
 static int CurrentIPCLayerImplNum = 0;
-static MotionIPCLayer* IPCLayerImpls[INTERCONNECT_TYPE_NUM];
+static MotionIPCLayer* IPCLayerImpls[MAX_NUMBER_TYPES];
 
 /*
  * MOTION NODE INFO DATA STRUCTURES
@@ -83,7 +83,8 @@ static void statNewTupleArrived(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCS
 static void statRecvTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry);
 static bool ShouldSendRecordCache(const int32 conn, SerTupInfo *pSerInfo);
 static void UpdateSentRecordCache(int32 *conn);
-static bool IsICTypeExist(GpVars_Interconnect_Type type);
+static int GetICTypeByName(const char *type_name);
+static int TryFindICType();
 
 /* Helper function to perform the operations necessary to reconstruct a
  * HeapTuple from a list of tuple-chunks, and then update the Motion Layer
@@ -1280,16 +1281,16 @@ UpdateSentRecordCache(int32 *sent_record_typmod)
 	}
 }
 
-static bool
-IsICTypeExist(GpVars_Interconnect_Type type)
+static int
+GetICTypeByName(const char *type_name)
 {
 	for (int i = 0; i < CurrentIPCLayerImplNum; ++i)
 	{
-		if (IPCLayerImpls[i]->ic_type == type)
-			return true;
+		if (!pg_strcasecmp(IPCLayerImpls[i]->type_name, type_name))
+			return IPCLayerImpls[i]->ic_type;
 	}
 
-	return false;
+	return -1;
 }
 
 /*
@@ -1306,8 +1307,14 @@ TryFindICType()
 
 	for (int i = 0; i < IPCLAYER_CANDIDATE_NUM; ++i)
 	{
-		if (IsICTypeExist(candidate_types_order[i]))
-			return candidate_types_order[i];
+		for (int j = 0; j < CurrentIPCLayerImplNum; ++j)
+		{
+			/*
+			 * find candidate ic type in IPCLayerImpls and return it.
+			 */
+			if (candidate_types_order[i] == IPCLayerImpls[j]->ic_type)
+				return candidate_types_order[i];
+		}
 	}
 
 	/* never run here, just keep compiler slience */
@@ -1316,44 +1323,37 @@ TryFindICType()
 }
 
 void
-SetCurrentMotionIPCLayer(int new_type)
+SetCurrentMotionIPCLayer(const char *type_name)
 {
 	int type;
 
-	/*
-	 * Only set Gp_interconnect_type before interconnect.so loaded.
-	 */
+	/* do nothing before interconnect.so loaded. */
 	if (!process_shared_preload_libraries_done)
-	{
-		Gp_interconnect_type = new_type;
 		return;
-	}
 
-	if (IsICTypeExist(new_type))
-	{
-		type = new_type;
-	}
-	else
-	{
-		if (!IsUnderPostmaster)
-		{
-			/* postmaster process */
-			ereport(WARNING,
-					(errcode(ERRCODE_WARNING_GP_INTERCONNECTION),
-					 errmsg("No IPC layer implement found with type: %d, "
-							"choose one from the loaded implements.",
-							new_type)));
+	if (type_name == NULL)
+		type_name = "";
 
-			type = TryFindICType();
-		}
-		else
+	type = GetICTypeByName(type_name);
+	if (type < 0)
+	{
+		if (IsUnderPostmaster)
 		{
 			/* backend process */
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("No IPC layer implement found with type: %d.",
-							new_type)));
+					 errmsg("No IPC layer implement found with type: \"%s\".",
+							type_name)));
 		}
+
+		/* postmaster process */
+		ereport(WARNING,
+				(errcode(ERRCODE_WARNING_GP_INTERCONNECTION),
+				 errmsg("No IPC layer implement found with type: \"%s\", "
+						"choose one from the loaded implements.",
+						type_name)));
+
+		type = TryFindICType();
 	}
 
 	for (int i = 0; i < CurrentIPCLayerImplNum; ++i)
@@ -1361,7 +1361,7 @@ SetCurrentMotionIPCLayer(int new_type)
 		if (IPCLayerImpls[i]->ic_type == type)
 		{
 			CurrentMotionIPCLayer = IPCLayerImpls[i];
-			Gp_interconnect_type = CurrentMotionIPCLayer->ic_type;
+			Gp_interconnect_type  = CurrentMotionIPCLayer->ic_type;
 			break;
 		}
 	}
@@ -1372,19 +1372,22 @@ SetCurrentMotionIPCLayer(int new_type)
 void
 RegisterIPCLayerImpl(MotionIPCLayer *impl)
 {
-	if (CurrentIPCLayerImplNum >= INTERCONNECT_TYPE_NUM)
+	if (CurrentIPCLayerImplNum >= MAX_NUMBER_TYPES)
 	{
 		ereport(WARNING,
 				(errcode(ERRCODE_WARNING_GP_INTERCONNECTION),
-				 errmsg("There is no space for a new IPC layer implement.")));
+				 errmsg("There is no free entry for a new IPC layer implement.")));
 
 		return;
 	}
 
-	if (IsICTypeExist(impl->ic_type))
+	for (int i = 0; i < CurrentIPCLayerImplNum; ++i)
 	{
-		elog(LOG, "ic_type: %d has been registered.", impl->ic_type);
-		return;
+		if (impl->ic_type == IPCLayerImpls[i]->ic_type)
+		{
+			elog(ERROR, "type: \"%s\" has been registered.", impl->type_name);
+			return;
+		}
 	}
 
 	IPCLayerImpls[CurrentIPCLayerImplNum++] = impl;

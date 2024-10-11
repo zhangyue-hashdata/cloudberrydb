@@ -1242,7 +1242,7 @@ PostmasterMain(int argc, char *argv[])
 	/*
 	 * Set CurrentMotionIPCLayer after interconnect.so is loaded.
 	 */
-	SetCurrentMotionIPCLayer(Gp_interconnect_type);
+	SetCurrentMotionIPCLayer(NULL);
 
 	/*
 	 * Initialize SSL library, if specified.

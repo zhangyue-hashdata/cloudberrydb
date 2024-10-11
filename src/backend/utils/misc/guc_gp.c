@@ -104,7 +104,8 @@ static bool check_gp_resource_group_bypass(bool *newval, void **extra, GucSource
 static int guc_array_compare(const void *a, const void *b);
 static bool check_max_running_tasks(int *newval, void **extra, GucSource source);
 
-static void assign_gp_interconnect_type(int newval, void *extra);
+static void assign_gp_interconnect_type(const char *newval, void *extra);
+static const char *show_gp_interconnect_type(void);
 
 int listenerBacklog  = 128;
 
@@ -215,6 +216,12 @@ bool create_restartpoint_on_ckpt_record_replay = false;
  * and is kept in sync by assign_hooks.
  */
 static char *gp_resource_manager_str;
+
+/*
+ * This variable is a dummy that doesn't do anything.
+ * The real state is maintained in Gp_interconnect_type.
+ */
+static char *Gp_interconnect_type_str;
 
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
@@ -525,15 +532,6 @@ static const struct config_enum_entry gp_autostats_modes[] = {
 static const struct config_enum_entry gp_interconnect_fc_methods[] = {
 	{"loss", INTERCONNECT_FC_METHOD_LOSS},
 	{"capacity", INTERCONNECT_FC_METHOD_CAPACITY},
-	{NULL, 0}
-};
-
-static const struct config_enum_entry gp_interconnect_types[] = {
-	{"udpifc", INTERCONNECT_TYPE_UDPIFC},
-	{"tcp", INTERCONNECT_TYPE_TCP},
-#ifdef ENABLE_IC_PROXY
-	{"proxy", INTERCONNECT_TYPE_PROXY},
-#endif  /* ENABLE_IC_PROXY */
 	{NULL, 0}
 };
 
@@ -4773,6 +4771,20 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 #endif  /* ENABLE_IC_PROXY */
 
+	{
+		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
+			gettext_noop("Sets the protocol used for inter-node communication."),
+			gettext_noop("Valid values are \"tcp\", \"udpifc\""
+#ifdef ENABLE_IC_PROXY
+						 " and \"proxy\""
+#endif  /* ENABLE_IC_PROXY */
+						 ".")
+		},
+		&Gp_interconnect_type_str,
+		"udpifc",
+		NULL, assign_gp_interconnect_type, show_gp_interconnect_type
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -4922,20 +4934,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		&Gp_interconnect_fc_method,
 		INTERCONNECT_FC_METHOD_LOSS, gp_interconnect_fc_methods,
 		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
-			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Valid values are \"tcp\", \"udpifc\""
-#ifdef ENABLE_IC_PROXY
-						 " and \"proxy\""
-#endif  /* ENABLE_IC_PROXY */
-						 ".")
-		},
-		&Gp_interconnect_type,
-		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types,
-		NULL, assign_gp_interconnect_type, NULL
 	},
 
 	{
@@ -5477,7 +5475,17 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 }
 
 static void
-assign_gp_interconnect_type(int newval, void *extra)
+assign_gp_interconnect_type(const char *newval, void *extra)
 {
 	SetCurrentMotionIPCLayer(newval);
+}
+
+static const char *
+show_gp_interconnect_type(void)
+{
+	if (CurrentMotionIPCLayer)
+		return CurrentMotionIPCLayer->type_name;
+
+	/* singlenode or GP_ROLE_UTILITY */
+	return "unknown";
 }
