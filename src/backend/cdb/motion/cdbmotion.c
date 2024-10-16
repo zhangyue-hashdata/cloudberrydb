@@ -32,7 +32,6 @@
 
 MotionIPCLayer *CurrentMotionIPCLayer = NULL;
 
-#define IPCLAYER_CANDIDATE_NUM 3
 static int CurrentIPCLayerImplNum = 0;
 static MotionIPCLayer* IPCLayerImpls[MAX_NUMBER_TYPES];
 
@@ -1302,10 +1301,10 @@ TryFindICType()
 	/* IPCLayerImpls[0]->ic_type is valid at least */
 	Assert(CurrentIPCLayerImplNum);
 
-	int candidate_types_order[IPCLAYER_CANDIDATE_NUM] =
+	int candidate_types_order[] =
 		{Gp_interconnect_type, INTERCONNECT_TYPE_UDPIFC, IPCLayerImpls[0]->ic_type};
 
-	for (int i = 0; i < IPCLAYER_CANDIDATE_NUM; ++i)
+	for (int i = 0; i < lengthof(candidate_types_order); ++i)
 	{
 		for (int j = 0; j < CurrentIPCLayerImplNum; ++j)
 		{
@@ -1360,8 +1359,9 @@ SetCurrentMotionIPCLayer(const char *type_name)
 	{
 		if (IPCLayerImpls[i]->ic_type == type)
 		{
-			CurrentMotionIPCLayer = IPCLayerImpls[i];
-			Gp_interconnect_type  = CurrentMotionIPCLayer->ic_type;
+			CurrentMotionIPCLayer    = IPCLayerImpls[i];
+			Gp_interconnect_type     = CurrentMotionIPCLayer->ic_type;
+			Gp_interconnect_type_str = strdup(CurrentMotionIPCLayer->type_name);
 			break;
 		}
 	}
@@ -1374,8 +1374,8 @@ RegisterIPCLayerImpl(MotionIPCLayer *impl)
 {
 	if (CurrentIPCLayerImplNum >= MAX_NUMBER_TYPES)
 	{
-		ereport(WARNING,
-				(errcode(ERRCODE_WARNING_GP_INTERCONNECTION),
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("There is no free entry for a new IPC layer implement.")));
 
 		return;

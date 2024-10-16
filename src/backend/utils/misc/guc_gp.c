@@ -217,12 +217,6 @@ bool create_restartpoint_on_ckpt_record_replay = false;
  */
 static char *gp_resource_manager_str;
 
-/*
- * This variable is a dummy that doesn't do anything.
- * The real state is maintained in Gp_interconnect_type.
- */
-static char *Gp_interconnect_type_str;
-
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
 int			gp_resqueue_priority_local_interval;

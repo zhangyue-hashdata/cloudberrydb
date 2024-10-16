@@ -315,6 +315,7 @@ typedef enum GpVars_Interconnect_Type
 } GpVars_Interconnect_Type;
 
 extern int Gp_interconnect_type;
+extern char *Gp_interconnect_type_str;
 
 /*
  * We support different strategies for address binding for sockets used for
