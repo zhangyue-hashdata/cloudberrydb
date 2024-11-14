@@ -469,9 +469,11 @@ AddTagDescriptions(List *tags,
 		char	*tagvalue;
 		Datum	datum;
 		bool	isnull;
+		bool	has_matching_allowed_val;
 		List	*allowed_values;
 		ListCell	*value_cell;
 		
+		has_matching_allowed_val = false;
 		def = lfirst(cell);
 		tagname = def->defname;
 		tagvalue = defGetString(def);
@@ -499,12 +501,13 @@ AddTagDescriptions(List *tags,
 
 				if (strcmp(tagvalue, allowed_value) == 0)
 				{
+					has_matching_allowed_val = true;
 					break;
 				}
 			}
 		}
 
-		if (value_cell || isnull)
+		if (has_matching_allowed_val || isnull)
 		{
 			desc_tuple = SearchSysCache4(TAGDESCRIPTION,
 										 ObjectIdGetDatum(databaseid),
