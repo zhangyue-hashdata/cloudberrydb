@@ -389,6 +389,7 @@ static bool testAttributeEncodingSupport(Archive *fout);
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
 static void addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
+static void addSchedule(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo);
 static bool isGPDB4300OrLater(Archive *fout);
 static bool isGPDB(Archive *fout);
 static bool isGPDB5000OrLater(Archive *fout);
@@ -2930,8 +2931,16 @@ refreshMatViewData(Archive *fout, const TableDataInfo *tdinfo)
 
 	q = createPQExpBuffer();
 
-	appendPQExpBuffer(q, "REFRESH MATERIALIZED VIEW %s;\n",
-					  fmtQualifiedDumpable(tbinfo));
+	if (tbinfo->isdynamic)
+	{
+		appendPQExpBuffer(q, "REFRESH DYNAMIC TABLE %s;\n",
+						  fmtQualifiedDumpable(tbinfo));
+	}
+	else
+	{
+		appendPQExpBuffer(q, "REFRESH MATERIALIZED VIEW %s;\n",
+						  fmtQualifiedDumpable(tbinfo));
+	}
 
 	if (tdinfo->dobj.dump & DUMP_COMPONENT_DATA)
 		ArchiveEntry(fout,
@@ -2940,7 +2949,7 @@ refreshMatViewData(Archive *fout, const TableDataInfo *tdinfo)
 					 ARCHIVE_OPTS(.tag = tbinfo->dobj.name,
 								  .namespace = tbinfo->dobj.namespace->dobj.name,
 								  .owner = tbinfo->rolname,
-								  .description = "MATERIALIZED VIEW DATA",
+								  .description = tbinfo->isdynamic ? "DYNAMIC TABLE DATA": "MATERIALIZED VIEW DATA",
 								  .section = SECTION_POST_DATA,
 								  .createStmt = q->data,
 								  .deps = tdinfo->dobj.dependencies,
@@ -7415,6 +7424,7 @@ getTables(Archive *fout, int *numTables)
 	int			i_amname;
 	int			i_amoid;
 	int			i_isivm;
+	int			i_isdynamic;
 
 	/*
 	 * Find all the tables and table-like objects.
@@ -7535,7 +7545,8 @@ getTables(Archive *fout, int *numTables)
 						  "%s AS partkeydef, "
 						  "%s AS ispartition, "
 						  "%s AS partbound, "
-						  "c.relisivm AS isivm "
+						  "c.relisivm AS isivm, "
+						  "c.relisdynamic AS isdynamic "
 						  "FROM pg_class c "
 						  "LEFT JOIN pg_depend d ON "
 						  "(c.relkind = '%c' AND "
@@ -8106,6 +8117,7 @@ getTables(Archive *fout, int *numTables)
 	i_amname = PQfnumber(res, "amname");
 	i_amoid = PQfnumber(res, "amoid");
 	i_isivm = PQfnumber(res, "isivm");
+	i_isdynamic = PQfnumber(res, "isdynamic");
 
 	if (dopt->lockWaitTimeout)
 	{
@@ -8238,6 +8250,7 @@ getTables(Archive *fout, int *numTables)
 		tblinfo[i].ispartition = (strcmp(PQgetvalue(res, i, i_ispartition), "t") == 0);
 		tblinfo[i].partbound = pg_strdup(PQgetvalue(res, i, i_partbound));
 		tblinfo[i].isivm = (strcmp(PQgetvalue(res, i, i_isivm), "t") == 0);
+		tblinfo[i].isdynamic = (strcmp(PQgetvalue(res, i, i_isdynamic), "t") == 0);
 
 		/* foreign server */
 		tblinfo[i].foreign_server = atooid(PQgetvalue(res, i, i_foreignserver));
@@ -18081,7 +18094,10 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 					break;
 				}
 			case RELKIND_MATVIEW:
-				reltypename = "MATERIALIZED VIEW";
+				if (tbinfo->isdynamic)
+					reltypename = "DYNAMIC TABLE";
+				else
+					reltypename = "MATERIALIZED VIEW";
 				break;
 			default:
 				reltypename = "TABLE";
@@ -18154,14 +18170,23 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			}
 		}
 
-		appendPQExpBuffer(q, "CREATE %s%s%s %s",
-						  tbinfo->relpersistence == RELPERSISTENCE_UNLOGGED ?
-						  "UNLOGGED " : "",
-						  tbinfo->relkind == RELKIND_MATVIEW && tbinfo->isivm ?
-						  "INCREMENTAL " : "",
-						  reltypename,
-						  qualrelname);
+		if (tbinfo->relkind == RELKIND_MATVIEW && tbinfo->isdynamic)
+		{
+			/* We'r sure there is no UNLOGGED and this is a DYNAMIC TABLE. */
+			appendPQExpBuffer(q, "CREATE DYNAMIC TABLE %s", qualrelname);
+			addSchedule(fout, q, tbinfo);
+		}
+		else
+		{
+			appendPQExpBuffer(q, "CREATE %s%s%s %s",
+							  tbinfo->relpersistence == RELPERSISTENCE_UNLOGGED ?
+							  "UNLOGGED " : "",
+							  tbinfo->relkind == RELKIND_MATVIEW && tbinfo->isivm ?
+							  "INCREMENTAL " : "",
+							  reltypename,
+							  qualrelname);
 
+		}
 		/*
 		 * Attach to type, if reloftype; except in case of a binary upgrade,
 		 * we dump the table normally and attach it to the type afterward.
@@ -21436,6 +21461,32 @@ testExtProtocolSupport(Archive *fout)
 	return isSupported;
 }
 
+/*
+ *	addSchedule
+ *
+ *	find the SCHEDULE of the job in pg_task with dynamic table
+ *	and append the SCHEDULE clause to the passed in dump buffer (q).
+ */
+static void
+addSchedule(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo)
+{
+	PQExpBuffer query = createPQExpBuffer();
+	PGresult   *res;
+	char	   *dby;
+
+	appendPQExpBuffer(query,
+					  "SELECT pg_catalog.pg_get_dynamic_table_schedule(%u)",
+					  tbinfo->dobj.catId.oid);
+
+	res = ExecuteSqlQueryForSingleRow(fout, query->data);
+
+	dby = PQgetvalue(res, 0, 0);
+	if (strcmp(dby, "") != 0)
+		appendPQExpBuffer(q, " SCHEDULE \'%s\'", PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+	destroyPQExpBuffer(query);
+}
 
 /*
  *	addDistributedBy
