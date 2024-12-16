@@ -143,7 +143,6 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 	rnode.node = rel->rd_node;
 	rnode.backend = rel->rd_backend;
 
-	RelationOpenSmgr(rel);
 
 	/* open datum streams.  It will open segment file underneath */
 	for (int i = 0; i < natts; ++i)
@@ -173,6 +172,8 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc, 
 		ct = opts[i]->compresstype;
 		clvl = opts[i]->compresslevel;
 		blksz = opts[i]->blocksize;
+
+		RelationOpenSmgr(rel);
 
 		ds[i] = create_datumstreamwrite(ct,
 										clvl,
@@ -236,8 +237,6 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 	for (AttrNumber attno = 0; attno < relationTupleDesc->natts; attno++)
 		ds[attno] = NULL;
 
-	RelationOpenSmgr(rel);
-
 	/* And then initialize the data streams for those columns we need */
 	for (AttrNumber i = 0; i < num_proj_atts; i++)
 	{
@@ -268,6 +267,8 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 						 RelationGetRelationName(rel),
 						 attno + 1,
 						 NameStr(attr->attname));
+
+		RelationOpenSmgr(rel);
 
 		ds[attno] = create_datumstreamread(ct,
 										   clvl,
@@ -1531,8 +1532,6 @@ aocs_fetch_init(Relation relation,
 	aocsFetchDesc->datumStreamFetchDesc = (DatumStreamFetchDesc *)
 		palloc0(relation->rd_att->natts * sizeof(DatumStreamFetchDesc));
 
-	RelationOpenSmgr(relation);
-
 	for (colno = 0; colno < relation->rd_att->natts; colno++)
 	{
 
@@ -1564,6 +1563,8 @@ aocs_fetch_init(Relation relation,
 
 			aocsFetchDesc->datumStreamFetchDesc[colno] = (DatumStreamFetchDesc)
 				palloc0(sizeof(DatumStreamFetchDescData));
+			
+			RelationOpenSmgr(relation);
 
 			aocsFetchDesc->datumStreamFetchDesc[colno]->datumStream =
 				create_datumstreamread(ct,
@@ -2046,8 +2047,6 @@ aocs_addcol_init(Relation rel,
 
 	iattr = rel->rd_att->natts - num_newcols;
 
-	RelationOpenSmgr(rel);
-
 	for (i = 0; i < num_newcols; ++i, ++iattr)
 	{
 		Form_pg_attribute attr = TupleDescAttr(rel->rd_att, iattr);
@@ -2059,6 +2058,8 @@ aocs_addcol_init(Relation rel,
 		ct = opts[iattr]->compresstype;
 		clvl = opts[iattr]->compresslevel;
 		blksz = opts[iattr]->blocksize;
+		RelationOpenSmgr(rel);
+
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
