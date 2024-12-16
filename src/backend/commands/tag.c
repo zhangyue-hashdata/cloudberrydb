@@ -480,7 +480,10 @@ AddTagDescriptions(List *tags,
 		
 		tuple = SearchSysCache1(TAGNAME, CStringGetDatum(tagname));
 		if (!HeapTupleIsValid(tuple))
-			elog(ERROR, "cache lookup failed for tag %s", tagname);
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					errmsg("tag \"%s\" does not exist",
+							tagname)));
 
 		tagform = (Form_pg_tag) GETSTRUCT(tuple);
 		tagId = tagform->oid;
