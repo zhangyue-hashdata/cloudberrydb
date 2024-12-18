@@ -1852,6 +1852,7 @@ _readCreateDirectoryTableStmt(void)
 	_readCreateStmt_common(&local_node->base);
 
 	READ_STRING_FIELD(tablespacename);
+	READ_STRING_FIELD(location);
 
 	READ_DONE();
 }
