@@ -684,6 +684,15 @@ jobs:
             pg_settings:
               optimizer: "off"
 
+          - test: ic-good-opt-on
+            make_configs:
+              - src/test/regress:installcheck-good
+            num_primary_mirror_pairs: 3
+            enable_cgroups: false
+            enable_core_check: true
+            pg_settings:
+              optimizer: "on"
+
           - test: ic-expandshrink
             make_configs:
               - src/test/isolation2:installcheck-expandshrink

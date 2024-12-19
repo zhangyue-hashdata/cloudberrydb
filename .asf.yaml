@@ -87,6 +87,7 @@ github:
         - Build Apache Cloudberry
         - RPM Install Test Apache Cloudberry
         - ic-good-opt-off
+        - ic-good-opt-on
         - ic-expandshrink
         - ic-singlenode
         - ic-resgroup-v2
