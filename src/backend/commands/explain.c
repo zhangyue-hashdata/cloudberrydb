@@ -3440,7 +3440,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				appendStringInfo(es->str, "  Max Memory: " INT64_FORMAT "kB  Avg Memory: " INT64_FORMAT "kb (%d segments)\n",
+				appendStringInfo(es->str, "  Max Memory: " INT64_FORMAT "kB  Avg Memory: " INT64_FORMAT "kB (%d segments)\n",
 								 (long) agg->vmax,
 								 (long) (agg->vsum / agg->vcnt),
 								 agg->vcnt);
