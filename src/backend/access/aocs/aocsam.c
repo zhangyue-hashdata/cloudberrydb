@@ -120,6 +120,7 @@ open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 	{
 		AttrNumber	attno = proj_atts[i];
 
+		RelationOpenSmgr(rel);
 		open_datumstreamread_segfile(basepath, rel->rd_smgr->smgr_ao, rel->rd_node, segInfo, ds[attno], attno);
 		datumstreamread_block(ds[attno], blockDirectory, attno);
 		
@@ -1419,6 +1420,7 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 	if (logicalEof == 0)
 		return false;
 
+	RelationOpenSmgr(aocsFetchDesc->relation);
 	open_datumstreamread_segfile(aocsFetchDesc->basepath, aocsFetchDesc->relation->rd_smgr->smgr_ao, aocsFetchDesc->relation->rd_node,
 								 fsInfo,
 								 datumStreamFetchDesc->datumStream,
