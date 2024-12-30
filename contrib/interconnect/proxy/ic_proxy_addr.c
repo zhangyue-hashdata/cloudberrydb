@@ -234,6 +234,11 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 	 * of the addresses.
 	 */
 	ic_proxy_prev_addrs = ic_proxy_list_free_deep(ic_proxy_prev_addrs);
+	/*
+	 * before reloading the config file. we should sort ic_proxy_addrs by dbid to
+	 * avoid mis-disconnecting of addrs.
+	*/
+	list_sort(ic_proxy_addrs, ic_proxy_addr_compare_dbid);
 	ic_proxy_prev_addrs = ic_proxy_addrs;
 	ic_proxy_addrs = NULL;
 
