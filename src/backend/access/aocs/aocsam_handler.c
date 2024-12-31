@@ -2342,6 +2342,7 @@ aoco_transform_column_encoding_clauses(Relation rel, List *aocoColumnEncoding,
 	bool foundCompressTypeNone = false;
 	char *cmplevel = NULL;
 	bool foundBlockSize = false;
+	bool hasAttrs;
 	char *arg;
 	List *retList = list_copy(aocoColumnEncoding);
 	DefElem *el;
@@ -2351,6 +2352,14 @@ aoco_transform_column_encoding_clauses(Relation rel, List *aocoColumnEncoding,
 	int16		compresslevel = 0;
 	char	   *compresstype = NULL;
 	NameData	compresstype_nd;
+
+	/*
+	 * The relam of partition table may be ao table, but partition table
+	 * has no entry in pg_appendonly. It shouldn't fetch encoding options
+	 * from here for partition tables. See details in function
+	 * transformColumnEncoding.
+	 */
+	hasAttrs = rel && rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE;
 
 	foreach(lc, aocoColumnEncoding)
 	{
@@ -2388,7 +2397,7 @@ aoco_transform_column_encoding_clauses(Relation rel, List *aocoColumnEncoding,
 	 * table setting in pg_appendonly is preferred over default
 	 * options in GUC gp_default_storage_option.
 	 */
-	if (rel)
+	if (hasAttrs)
 	{
 		GetAppendOnlyEntryAttributes(RelationGetRelid(rel),
 									 &blocksize,
@@ -2399,7 +2408,7 @@ aoco_transform_column_encoding_clauses(Relation rel, List *aocoColumnEncoding,
 		compresstype = NameStr(compresstype_nd);
 	}
 
-	if (!foundCompressType && rel && compresstype[0])
+	if (!foundCompressType && hasAttrs && compresstype[0])
 	{
 		el = makeDefElem("compresstype", (Node *) makeString(pstrdup(compresstype)), -1);
 		retList = lappend(retList, el);
