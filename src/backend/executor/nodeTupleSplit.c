@@ -187,7 +187,10 @@ ExecTupleSplit(PlanState *pstate)
 		econtext->ecxt_outertuple = node->outerslot;
 
 		/* The filter is pushed down from relative DQA */
-		ExprState * filter = node->agg_filter_array[node->currentExprId];
+		ExprState * filter = NULL;
+		if (node->currentExprId < node->numDisDQAs)
+			filter = node->agg_filter_array[node->currentExprId];
+
 		if (filter)
 		{
 			Datum		res;
