@@ -224,10 +224,12 @@ TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 	ListCell   *cell;
 	int			mapsize = remapper->typmodmapsize + list_length(typelist);
 
+	MemoryContext oldcontext = MemoryContextSwitchTo(remapper->mycontext);
 	if (remapper->typmodmap)
 		remapper->typmodmap = repalloc(remapper->typmodmap, mapsize * sizeof(int32));
 	else
 		remapper->typmodmap = palloc(mapsize * sizeof(int32));
+	MemoryContextSwitchTo(oldcontext);
 
 	for (j = 0; j < list_length(typelist); j++)
 		remapper->typmodmap[remapper->typmodmapsize + j] = -1;
