@@ -504,6 +504,7 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	int64		AnalyzePageDirty = VacuumPageDirty;
 	PgStat_Counter startreadtime = 0;
 	PgStat_Counter startwritetime = 0;
+	int max_natts = onerel->rd_att->natts;
 
 
 	if (inh)
@@ -722,8 +723,21 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	/*
 	 * Maintain information if the row of a column exceeds WIDTH_THRESHOLD
 	 */
-	colLargeRowIndexes = (Bitmapset **) palloc0(sizeof(Bitmapset *) * onerel->rd_att->natts);
-	colLargeRowLength = (double *)palloc0(sizeof(double) * onerel->rd_att->natts);
+	if (inh)
+	{
+		ListCell *le;
+		List* tableOIDs = find_all_inheritors(RelationGetRelid(onerel), NoLock, NULL);
+		foreach (le, tableOIDs)
+		{
+			Oid child_relid = lfirst_oid(le);
+			int natts = get_relnatts(child_relid);
+			if (natts > max_natts)
+				max_natts = natts;
+		}
+	}
+	colLargeRowIndexes = (Bitmapset **) palloc0(sizeof(Bitmapset *) * max_natts);
+	colLargeRowLength = (double *)palloc0(sizeof(double) * max_natts);
+
 
 	if ((params->options & VACOPT_FULLSCAN) != 0)
 	{
