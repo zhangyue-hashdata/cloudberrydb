@@ -59,3 +59,4 @@
 
 # CBDB specific ignores
 /singlenode_compatibility_cbdb.sql
+/tag.sql
