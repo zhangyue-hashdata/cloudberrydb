@@ -2665,10 +2665,12 @@ CREATE TABLE validation_syntax_tbl (a int)
 CREATE TABLE exchange_tbl (a int4);
 INSERT INTO exchange_tbl VALUES (100);
 ALTER TABLE validation_syntax_tbl EXCHANGE PARTITION p1 WITH TABLE exchange_tbl WITH VALIDATION;
-NOTICE:  specifying "WITH VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+NOTICE:  specifying "WITH VALIDATION" acts as no operation
+DETAIL:  If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
 ERROR:  partition constraint of relation "exchange_tbl" is violated by some row
 ALTER TABLE validation_syntax_tbl EXCHANGE PARTITION p1 WITH TABLE exchange_tbl WITHOUT VALIDATION;
-NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation
+DETAIL:  If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
 ERROR:  partition constraint of relation "exchange_tbl" is violated by some row
 DROP TABLE exchange_tbl;
 DROP TABLE validation_syntax_tbl;
