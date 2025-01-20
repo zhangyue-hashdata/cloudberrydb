@@ -692,48 +692,43 @@ AppendOnlyBlockDirectory_GetEntry(
 
 		systable_endscan_ordered(idxScanDesc);
 	}
+		
 
+	minipageInfo = &blockDirectory->minipages[columnGroupNo];
+
+	/*
+	 * Perform a binary search over the minipage to find the entry about
+	 * the AO block.
+	 */
+	entry_no = find_minipage_entry(minipageInfo->minipage,
+								   minipageInfo->numMinipageEntries,
+								   rowNum);
+
+	/* If there are no entries, return false. */
+	if (entry_no == -1 && minipageInfo->numMinipageEntries == 0)
+		return false;
+
+	if (entry_no == -1)
 	{
-		MinipagePerColumnGroup *minipageInfo;
-
-		minipageInfo = &blockDirectory->minipages[columnGroupNo];
-
 		/*
-		 * Perform a binary search over the minipage to find the entry about
-		 * the AO block.
+		 * Since the last few blocks may not be logged in the block
+		 * directory, we always use the last entry.
+		 *
+		 * FIXME: If we didn't find a suitable entry, why even use the last
+		 * entry? Currently, as it stands we would most likely return
+		 * true from this function. This will lead to us having to do a
+		 * fetch of the tuple from the physical file in the layer above (see
+		 * scanToFetchTuple()), where we would ultimately find the tuple
+		 * missing. Would it be correct to set the directory entry here to
+		 * be the last one (for caching purposes) and return false, in order
+		 * to avoid this physical file read?
 		 */
-		entry_no = find_minipage_entry(minipageInfo->minipage,
-									   minipageInfo->numMinipageEntries,
-									   rowNum);
-
-		/* If there are no entries, return false. */
-		if (entry_no == -1 && minipageInfo->numMinipageEntries == 0)
-			return false;
-
-		if (entry_no == -1)
-		{
-			/*
-			 * Since the last few blocks may not be logged in the block
-			 * directory, we always use the last entry.
-			 *
-			 * FIXME: If we didn't find a suitable entry, why even use the last
-			 * entry? Currently, as it stands we would most likely return
-			 * true from this function. This will lead to us having to do a
-			 * fetch of the tuple from the physical file in the layer above (see
-			 * scanToFetchTuple()), where we would ultimately find the tuple
-			 * missing. Would it be correct to set the directory entry here to
-			 * be the last one (for caching purposes) and return false, in order
-			 * to avoid this physical file read?
-			 */
-			entry_no = minipageInfo->numMinipageEntries - 1;
-		}
-		return set_directoryentry_range(blockDirectory,
-										columnGroupNo,
-										entry_no,
-										directoryEntry);
+		entry_no = minipageInfo->numMinipageEntries - 1;
 	}
-
-	return false;
+	return set_directoryentry_range(blockDirectory,
+									columnGroupNo,
+									entry_no,
+									directoryEntry);
 }
 
 /*
