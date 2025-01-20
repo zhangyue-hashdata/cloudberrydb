@@ -123,6 +123,24 @@ static void ensure_tablespace_directory_is_empty(const Oid tablespaceoid, const 
 static void unlink_during_redo(Oid tablepace_oid_to_unlink);
 static void unlink_without_redo(Oid tablespace_oid_to_unlink);
 
+static bool
+TablespaceLockTuple(Oid tablespace_oid, LOCKMODE lockmode, bool wait)
+{
+	bool ok = true;
+
+	Assert(OidIsValid(tablespace_oid));
+	Assert(tablespace_oid != GLOBALTABLESPACE_OID);
+	Assert(tablespace_oid != DEFAULTTABLESPACE_OID);
+
+	if (wait)
+		LockSharedObject(TableSpaceRelationId, tablespace_oid, 0, lockmode);
+	else
+		ok = ConditionalLockSharedObject(TableSpaceRelationId, tablespace_oid,
+										 0, lockmode);
+
+	return ok;
+}
+
 /*
  * Each database using a table space is isolated into its own name space
  * by a subdirectory named for the database OID.  On first creation of an
@@ -155,6 +173,9 @@ TablespaceCreateDbspace(Oid spcNode, Oid dbNode, bool isRedo)
 
 	Assert(OidIsValid(spcNode));
 	Assert(OidIsValid(dbNode));
+
+	if (spcNode != DEFAULTTABLESPACE_OID && !isRedo)
+		TablespaceLockTuple(spcNode, AccessShareLock, true);
 
 	dir = GetDatabasePath(dbNode, spcNode);
 
@@ -720,6 +741,13 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 	/* DROP hook for the tablespace being removed */
 	InvokeObjectDropHook(TableSpaceRelationId, tablespaceoid, 0);
 
+	if (!TablespaceLockTuple(tablespaceoid, AccessExclusiveLock, false))
+		ereport(ERROR,
+				(errcode(ERRCODE_LOCK_NOT_AVAILABLE),
+				 errmsg("could not lock tablespace \"%s\"",
+						tablespacename)));
+	SIMPLE_FAULT_INJECTOR("drop_tablespace_after_acquire_lock");
+
 	/*
 	 * Remove the pg_tablespace tuple (this will roll back if we fail below)
 	 */
@@ -795,7 +823,6 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 
 	/* We keep the lock on pg_tablespace until commit */
 	table_close(rel, NoLock);
-	SIMPLE_FAULT_INJECTOR("AfterTablespaceCreateLockRelease");
 
 	/*
 	 * If we are the QD, dispatch this DROP command to all the QEs
