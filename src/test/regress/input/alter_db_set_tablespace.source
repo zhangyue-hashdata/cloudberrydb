@@ -818,8 +818,8 @@ SELECT gp_inject_fault('all', 'reset', dbid) FROM gp_segment_configuration;
 \!rm -rf @testtablespace@/adst_dest
 
 --- start_ignore
--- Set fsync off because it is the value before the test
-\! gpconfig -c fsync -v off --skipvalidation;
+-- Set fsync on because it is the value before the test
+\! gpconfig -c fsync -v on --skipvalidation;
 -- Apply settings
 \! gpstop -u;
 --- end_ignore
