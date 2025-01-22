@@ -507,8 +507,8 @@ DROP TABLE co2heap3;
 DROP TABLE co2heap4;
 
 -- Scenario 7: AOCO to AO
-CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
-CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=3);
+CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=3);
 CREATE TABLE co2ao3(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
 CREATE TABLE co2ao4(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
 CREATE INDEX aoi ON co2ao(b);

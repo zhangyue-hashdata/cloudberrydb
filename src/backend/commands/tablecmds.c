@@ -584,7 +584,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 
 
 static void checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel);
-static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions, Oid newAm);
 static void clear_rel_opts(Relation rel);
 
 
@@ -1147,7 +1147,8 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 								stmt->options,
 								parentenc,
 								relkind == RELKIND_PARTITIONED_TABLE,
-								AMHandlerIsAoCols(amHandlerOid) /* createDefaultOne*/);
+								AMHandlerIsAoCols(amHandlerOid) /* createDefaultOne*/, true);
+
 		if (!AMHandlerSupportEncodingClause(tam) && relkind != RELKIND_PARTITIONED_TABLE)
 			stmt->attr_encodings = NIL;
 	}
@@ -1334,7 +1335,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 									false,
 									accessMethodId != AO_COLUMN_TABLE_AM_OID
 									&& !stmt->partbound && !stmt->partspec
-									/* errorOnEncodingClause */);
+									/* errorOnEncodingClause */, true);
 
 		AddRelationAttributeEncodings(rel, part_attr_encodings);
 	}
@@ -4823,7 +4824,7 @@ AlterTable(AlterTableStmt *stmt, LOCKMODE lockmode,
 /* 
  * Populate the column encoding option for each column in the relation. 
  */
-static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions)
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions, Oid newAccessMethod)
 {
 	int 		attno;
 	List 		*colDefs = NIL;
@@ -4841,7 +4842,7 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 		colDefs = lappend(colDefs, cd);
 	}
 
-	tam = GetTableAmRoutineByAmId(rel->rd_rel->relam);
+	tam = GetTableAmRoutineByAmId(newAccessMethod);
 
 	List *attr_encodings = transformColumnEncoding(tam /* TableAmRoutine */, rel,
 							colDefs /*column clauses*/,
@@ -4849,7 +4850,8 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 							withOptions /*withOptions*/,
 							NULL,
 							false,
-							RelationIsAoCols(rel));
+							newAccessMethod == AO_COLUMN_TABLE_AM_OID, RelationIsAppendOptimized(rel));
+
 
 	AddRelationAttributeEncodings(rel, attr_encodings);
 }
@@ -6217,7 +6219,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab,
 
 			/* If we are changing AM to AOCO, add pg_attribute_encoding entries for each column. */
 			if (tab->newAccessMethod == AO_COLUMN_TABLE_AM_OID) 
-				populate_rel_col_encodings(rel, NULL, (List*)cmd->def);
+				populate_rel_col_encodings(rel, NULL, (List*)cmd->def, tab->newAccessMethod);
 
 			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
@@ -8719,7 +8721,7 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 						NULL /* withOptions */,
 						NULL /* parentenc */,
 						false /* explicitOnly */,
-						RelationIsAoCols(rel) /* createDefaultOne */);
+						RelationIsAoCols(rel) /* createDefaultOne */, true);
 		/*
 		 * Store the encoding clause for AO/CO tables.
 		 */
@@ -16122,10 +16124,6 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	bool		repl_repl[Natts_pg_class];
 	const TableAmRoutine * newAM;
 	static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
-	Oid 		tableam;
-
-	/* Get the new table AM if applicable. Otherwise get the one from the reltion. */
-	tableam = (newam != InvalidOid) ? newam : rel->rd_rel->relam;
 
 	if (defList == NIL && operation != AT_ReplaceRelOptions)
 		return;					/* nothing to do */

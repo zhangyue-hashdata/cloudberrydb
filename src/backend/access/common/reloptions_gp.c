@@ -1670,7 +1670,7 @@ find_crsd(const char *column, List *stenc)
 List *
 transformColumnEncoding(const TableAmRoutine *tam, Relation rel, List *colDefs,
 						List *stenc, List *withOptions, List *parentenc,
-						bool explicitOnly, bool createDefaultOne)
+						bool explicitOnly, bool createDefaultOne, bool appendonly)
 {
 	ColumnReferenceStorageDirective *deflt = NULL;
 	ListCell   *lc;
@@ -1713,7 +1713,10 @@ transformColumnEncoding(const TableAmRoutine *tam, Relation rel, List *colDefs,
 
 			deflt = copyObject(c);
 
-			deflt->encoding = tam->transform_column_encoding_clauses(rel, deflt->encoding, true, false);
+			if (appendonly)
+				deflt->encoding = tam->transform_column_encoding_clauses(rel, deflt->encoding, true, false);
+			else
+				deflt->encoding = transformStorageEncodingClause(deflt->encoding, true);
 
 			/*
 			 * The default encoding and the with clause better not
@@ -1742,8 +1745,10 @@ transformColumnEncoding(const TableAmRoutine *tam, Relation rel, List *colDefs,
 			 * if current am not inmplement transform_column_encoding_clauses
 			 * then tmpenc not null but no need fill with options.
 			 */
-			if (tam->transform_column_encoding_clauses)
+			if (tam->transform_column_encoding_clauses && appendonly)
 				deflt->encoding = tam->transform_column_encoding_clauses(rel, tmpenc, false, false);
+			else
+				deflt->encoding = transformStorageEncodingClause(tmpenc, false);
 		}
 	}
 
@@ -1781,9 +1786,10 @@ transformColumnEncoding(const TableAmRoutine *tam, Relation rel, List *colDefs,
 			ColumnReferenceStorageDirective *s = find_crsd(d->colname, stenc);
 
 			if (s) {
-				encoding = tam->transform_column_encoding_clauses(rel, s->encoding, true, false);
+				if (tam->transform_column_encoding_clauses)
+					encoding = tam->transform_column_encoding_clauses(rel, s->encoding, true, false);
 			} else {
-				if (deflt)
+				if (deflt && deflt->encoding != NULL)
 					encoding = copyObject(deflt->encoding);
 				else if (!explicitOnly)
 				{
@@ -1796,7 +1802,7 @@ transformColumnEncoding(const TableAmRoutine *tam, Relation rel, List *colDefs,
 					else if (d->typeName) {
 						/* get encoding by type, still need do transform and validate */
 						encoding = get_type_encoding(d->typeName);
-						if (tam->transform_column_encoding_clauses)
+						if (tam->transform_column_encoding_clauses && appendonly)
 							encoding = tam->transform_column_encoding_clauses(rel, encoding, true, true);
 					}
 					if (!encoding && createDefaultOne) {

@@ -755,8 +755,8 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
  relname |  amname   |                       reloptions                        
 ---------+-----------+---------------------------------------------------------
- ao2co   | ao_column | 
- ao2co2  | ao_column | 
+ ao2co   | ao_column | {blocksize=65536,compresslevel=5}
+ ao2co2  | ao_column | {blocksize=65536,compresslevel=5}
  ao2co3  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
  ao2co4  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (4 rows)
@@ -766,8 +766,8 @@ SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columns
 FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
  relname | blocksize | compresslevel | checksum | compresstype | columnstore 
 ---------+-----------+---------------+----------+--------------+-------------
- ao2co   |     32768 |             0 | t        |              | t
- ao2co2  |     32768 |             0 | t        |              | t
+ ao2co   |     65536 |             5 | t        | zlib         | t
+ ao2co2  |     65536 |             5 | t        | zlib         | t
  ao2co3  |     32768 |             3 | t        | rle_type     | t
  ao2co4  |     32768 |             3 | t        | rle_type     | t
 (4 rows)
@@ -812,14 +812,14 @@ SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
 SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
  relname  | attnum |                     attoptions                      
 ----------+--------+-----------------------------------------------------
- co2heap  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap3 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap3 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap4 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- co2heap4 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap  |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap  |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap2 |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap2 |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap3 |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap3 |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap4 |      1 | {compresstype=zlib,compresslevel=5,blocksize=65536}
+ co2heap4 |      2 | {compresstype=zlib,compresslevel=5,blocksize=65536}
 (8 rows)
 
 CREATE TEMP TABLE relfilebeforeco2heap AS
@@ -934,8 +934,8 @@ DROP TABLE co2heap2;
 DROP TABLE co2heap3;
 DROP TABLE co2heap4;
 -- Scenario 7: AOCO to AO
-CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
-CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=3);
+CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=3);
 CREATE TABLE co2ao3(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
 CREATE TABLE co2ao4(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
 CREATE INDEX aoi ON co2ao(b);
@@ -949,8 +949,8 @@ INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
  relname |                       reloptions                        
 ---------+---------------------------------------------------------
- co2ao   | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao   | {compresstype=zlib,compresslevel=3,blocksize=65536}
+ co2ao2  | {compresstype=zlib,compresslevel=3,blocksize=65536}
  co2ao3  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
  co2ao4  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
 (4 rows)
@@ -959,8 +959,8 @@ SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
  relname | compresstype | compresslevel | blocksize 
 ---------+--------------+---------------+-----------
- co2ao   | rle_type     |             3 |     65536
- co2ao2  | rle_type     |             3 |     65536
+ co2ao   | zlib         |             3 |     65536
+ co2ao2  | zlib         |             3 |     65536
  co2ao3  | rle_type     |             3 |     65536
  co2ao4  | rle_type     |             3 |     65536
 (4 rows)
@@ -969,10 +969,10 @@ SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, 
 SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
  relname | attnum |                       attoptions                        
 ---------+--------+---------------------------------------------------------
- co2ao   |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao   |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
- co2ao2  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao   |      1 | {compresstype=zlib,compresslevel=3,blocksize=65536}
+ co2ao   |      2 | {compresstype=zlib,compresslevel=3,blocksize=65536}
+ co2ao2  |      1 | {compresstype=zlib,compresslevel=3,blocksize=65536}
+ co2ao2  |      2 | {compresstype=zlib,compresslevel=3,blocksize=65536}
  co2ao3  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
  co2ao3  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
  co2ao4  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
@@ -1056,7 +1056,7 @@ SELECT count(*) FROM co2ao4;
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  88 |        3 |             1 |               88 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
           1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
           2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
@@ -1103,8 +1103,8 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random
 SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
  relname | compresstype | compresslevel | blocksize 
 ---------+--------------+---------------+-----------
- co2ao   |              |             0 |     32768
- co2ao2  |              |             0 |     32768
+ co2ao   | zlib         |             3 |     65536
+ co2ao2  | zlib         |             3 |     65536
  co2ao3  | zlib         |             7 |     32768
  co2ao4  | zlib         |             7 |     32768
 (4 rows)
@@ -1121,10 +1121,10 @@ SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE
 
 -- Only the new tables altered w/ reloptions supplies should have reloptions.
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
- relname |             reloptions              
----------+-------------------------------------
- co2ao   | 
- co2ao2  | 
+ relname |                     reloptions                      
+---------+-----------------------------------------------------
+ co2ao   | {compresstype=zlib,compresslevel=3,blocksize=65536}
+ co2ao2  | {compresstype=zlib,compresslevel=3,blocksize=65536}
  co2ao3  | {compresstype=zlib,compresslevel=7}
  co2ao4  | {compresstype=zlib,compresslevel=7}
 (4 rows)
