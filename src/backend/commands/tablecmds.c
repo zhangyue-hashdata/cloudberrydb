@@ -4826,6 +4826,7 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 {
 	int 		attno;
 	List 		*colDefs = NIL;
+	const TableAmRoutine *tam;
 	TupleDesc 	tupdesc = RelationGetDescr(rel);
 
 	/* Figure out the column definition list. */
@@ -4839,12 +4840,16 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 		colDefs = lappend(colDefs, cd);
 	}
 
-	List *attr_encodings = transformColumnEncoding(rel,
+	tam = GetTableAmRoutineByAmId(rel->rd_rel->relam);
+
+	List *attr_encodings = transformColumnEncoding(tam /* TableAmRoutine */, rel,
 							colDefs /*column clauses*/,
 							stenc /*encoding clauses*/,
 							withOptions /*withOptions*/,
-							rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE /*rootpartition*/,
-							false /*errorOnEncodingClause*/);
+							NULL,
+							false,
+							RelationIsAoCols(rel));
+
 	AddRelationAttributeEncodings(rel, attr_encodings);
 }
 
