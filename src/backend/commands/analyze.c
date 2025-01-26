@@ -5109,29 +5109,30 @@ calculate_correlation_use_weighted_mean(CdbPgResults *cdb_pgresults,
 
 	for (int segno = 0; segno < segmentNum; segno++)
 	{
-		int			rows;
+		int			rows, nfields;
 		float4		correlationValue;
 		int			attno;
 		struct pg_result *pgresult = cdb_pgresults->pg_results[segno];
 		int			index;
-
-		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
+		ExecStatusType status = PQresultStatus(pgresult);
+		if (status != PGRES_TUPLES_OK)
 		{
 			cdbdisp_clearCdbPgResults(cdb_pgresults);
 			ereport(ERROR,
 					(errmsg("unexpected result from segment: %d",
-							PQresultStatus(pgresult))));
+							status)));
 		}
 		/*
 		 * gp_acquire_correlations returns a result for each alive columns.
 		 */
 		rows = PQntuples(pgresult);
-		if (rows != live_natts || PQnfields(pgresult) != 1)
+		nfields = PQnfields(pgresult);
+		if (rows != live_natts || nfields != 1)
 		{
 			cdbdisp_clearCdbPgResults(cdb_pgresults);
 			ereport(ERROR,
 					(errmsg("unexpected shape of result from segment (%d rows, %d cols)",
-							rows, PQnfields(pgresult))));
+							rows, nfields)));
 		}
 		for (int j = 0; j < rows; j++)
 		{
@@ -5232,28 +5233,29 @@ calculate_correlation_use_mean(CdbPgResults *cdb_pgresults,
 
 	for (int segno = 0; segno < segmentNum; segno++)
 	{
-		int			ntuples;
+		int			ntuples, nfields;
 		float4		correlationValue;
 		int			attno;
 		struct pg_result *pgresult = cdb_pgresults->pg_results[segno];
-
-		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
+		ExecStatusType  status = PQresultStatus(pgresult);
+		if (status != PGRES_TUPLES_OK)
 		{
 			cdbdisp_clearCdbPgResults(cdb_pgresults);
 			ereport(ERROR,
 					(errmsg("unexpected result from segment: %d",
-							PQresultStatus(pgresult))));
+							status)));
 		}
 		/*
 		 * gp_acquire_correlations returns a result for each alive columns.
 		 */
 		ntuples = PQntuples(pgresult);
-		if (ntuples != live_natts || PQnfields(pgresult) != 1)
+		nfields = PQnfields(pgresult);
+		if (ntuples != live_natts || nfields != 1)
 		{
 			cdbdisp_clearCdbPgResults(cdb_pgresults);
 			ereport(ERROR,
 					(errmsg("unexpected shape of result from segment (%d rows, %d cols)",
-							ntuples, PQnfields(pgresult))));
+							ntuples, nfields)));
 		}
 		for (int j = 0; j < ntuples; j++)
 		{

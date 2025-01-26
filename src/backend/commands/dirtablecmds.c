@@ -478,22 +478,24 @@ remove_file(PG_FUNCTION_ARGS)
 	numDeletes = 0;
 	for (i = 0; i < cdbPgresults.numResults; i++)
 	{
+		int ntuples, nfields;
 		Datum value;
 		struct pg_result *pgresult = cdbPgresults.pg_results[i];
-
-		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
+		ExecStatusType status = PQresultStatus(pgresult);
+		if (status != PGRES_TUPLES_OK)
 		{
 			cdbdisp_clearCdbPgResults(&cdbPgresults);
 			ereport(ERROR,
-					(errmsg("unexpected result from segment: %d", PQresultStatus(pgresult))));
+					(errmsg("unexpected result from segment: %d", status)));
 		}
-
-		if (PQntuples(pgresult) != 1 || PQnfields(pgresult) != 1)
+		ntuples = PQntuples(pgresult);
+		nfields = PQnfields(pgresult);
+		if (ntuples != 1 || nfields != 1)
 		{
 			cdbdisp_clearCdbPgResults(&cdbPgresults);
 			ereport(ERROR,
 					(errmsg("unexpected shape of result from segment (%d rows, %d cols)",
-							PQntuples(pgresult), PQnfields(pgresult))));
+							ntuples, nfields)));
 		}
 		if (PQgetisnull(pgresult, 0, 0))
 			value = 0;

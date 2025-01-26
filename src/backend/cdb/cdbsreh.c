@@ -1098,13 +1098,13 @@ TruncateErrorLog(text *relname, bool persistent)
 			Datum		value;
 			bool		isnull;
 			struct pg_result *pgresult = cdb_pgresults.pg_results[i];
-
-			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
+			ExecStatusType status = PQresultStatus(pgresult);
+			if (status != PGRES_TUPLES_OK)
 			{
 				cdbdisp_clearCdbPgResults(&cdb_pgresults);
 				ereport(ERROR,
 						(errmsg("unexpected result from segment: %d",
-								PQresultStatus(pgresult))));
+								status)));
 			}
 			value = ResultToDatum(pgresult, 0, 0, boolin, &isnull);
 			allResults &= (!isnull && DatumGetBool(value));
