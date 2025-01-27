@@ -17888,7 +17888,7 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 
 	pre_built = prebuild_temp_table(rel, tmprel, dist_clause,
 									get_am_name(rel->rd_rel->relam),
-									storage_opts,
+									RelationIsAppendOptimized(rel) ? build_ao_rel_storage_opts(NIL, rel) : storage_opts,
 									RelationIsAppendOptimized(rel),
 									useExistingColumnAttributes);
 	if (pre_built)
@@ -17912,7 +17912,7 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 		into->options = storage_opts;
 		into->tableSpaceName = get_tablespace_name(tblspc);
 		into->distributedBy = (Node *)dist_clause;
-		if (RelationIsAoRows(rel))
+		if (RelationIsAppendOptimized(rel))
 		{
 			/*
 			 * In order to avoid being affected by the GUC of gp_default_storage_options,

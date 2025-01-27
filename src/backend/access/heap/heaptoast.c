@@ -35,7 +35,7 @@
 
 static void *
 heap_toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
-									MemTupleBinding *pbind, int options, bool ismemtuple);
+									MemTupleBinding *pbind, int options, int toast_tuple_target, bool ismemtuple);
 
 /* ----------
  * heap_toast_delete -
@@ -100,18 +100,18 @@ heap_toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative)
 HeapTuple
 heap_toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, int options)
 {
-	return (HeapTuple) heap_toast_insert_or_update_generic(rel, newtup, oldtup, NULL, options, false);
+	return (HeapTuple) heap_toast_insert_or_update_generic(rel, newtup, oldtup, NULL, options, TOAST_TUPLE_TARGET, false);
 }
 
 MemTuple memtup_toast_insert_or_update(Relation rel, MemTuple newtup, MemTuple oldtup,
-									   MemTupleBinding *pbind, int options)
+									   MemTupleBinding *pbind, int toast_tuple_target, int options)
 {
-	return (MemTuple) heap_toast_insert_or_update_generic(rel, newtup, oldtup, pbind, options, true);
+	return (MemTuple) heap_toast_insert_or_update_generic(rel, newtup, oldtup, pbind, toast_tuple_target, options, true);
 }
 
 static void *
 heap_toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
-									MemTupleBinding *pbind, int options, bool ismemtuple)
+									MemTupleBinding *pbind, int options, int toast_tuple_target, bool ismemtuple)
 {
 	void		*result_gtuple;
 	TupleDesc	tupleDesc;
