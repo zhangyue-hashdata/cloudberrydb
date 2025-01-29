@@ -11,12 +11,8 @@ typedef struct {
 	segmentMode segment_mode;
 	checksumMode checksum_mode;
 	bool continue_check_on_fatal;
-<<<<<<< HEAD
-} CloudberryUserOpts;
-=======
 	bool skip_target_check;
-} GreenplumUserOpts;
->>>>>>> e99317c50aa (Adds --skip-target-check to skip checks on the new cluster)
+} CloudberryUserOpts;
 
 static CloudberryUserOpts greenplum_user_opts;
 static bool check_fatal_occurred;

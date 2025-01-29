@@ -192,6 +192,9 @@ check_ok(void)
  *  respected.
  */
 void
+gp_fatal_log(const char *fmt,...)  __attribute__ ((format (gnu_printf, 1, 2)));
+
+void
 gp_fatal_log(const char *fmt,...)
 {
 	va_list		args;

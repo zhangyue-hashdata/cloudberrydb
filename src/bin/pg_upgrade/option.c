@@ -264,29 +264,19 @@ parseCommandLine(int argc, char *argv[])
 
 	/* Get values from env if not already set */
 	check_required_directory(&old_cluster.bindir, "PGBINOLD", false,
-<<<<<<< HEAD
 							 "-b", _("old cluster binaries reside"), false);
-	check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
-							 "-B", _("new cluster binaries reside"), true);
-	check_required_directory(&old_cluster.pgdata, "PGDATAOLD", false,
-							 "-d", _("old cluster data resides"), false);
-	check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
-							 "-D", _("new cluster data resides"), false);
-=======
-							 "-b", _("old cluster binaries reside"));
 
 	if(!is_skip_target_check())
 		check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
-					 "-B", "new cluster binaries reside");
+					 "-B", "new cluster binaries reside", false);
 
 	check_required_directory(&old_cluster.pgdata, "PGDATAOLD", false,
-							 "-d", _("old cluster data resides"));
+							 "-d", _("old cluster data resides"), false);
 
 	if(!is_skip_target_check())
 		check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
-					 "-D", "new cluster data resides");
+					 "-D", "new cluster data resides", false);
 
->>>>>>> e99317c50aa (Adds --skip-target-check to skip checks on the new cluster)
 	check_required_directory(&user_opts.socketdir, "PGSOCKETDIR", true,
 							 "-s", _("sockets will be created"), false);
 

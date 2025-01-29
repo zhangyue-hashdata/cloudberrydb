@@ -132,11 +132,6 @@ main(int argc, char **argv)
 	check_cluster_compatibility(live_check);
 
 	/* Set mask based on PGDATA permissions */
-<<<<<<< HEAD
-	if (!GetDataDirectoryCreatePerm(new_cluster.pgdata))
-		pg_fatal("could not read permissions of directory \"%s\": %s\n",
-				 new_cluster.pgdata, strerror(errno));
-=======
 	if (!is_skip_target_check())
 	{
 		if (!GetDataDirectoryCreatePerm(new_cluster.pgdata))
@@ -146,7 +141,6 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	}
->>>>>>> e99317c50aa (Adds --skip-target-check to skip checks on the new cluster)
 
 	umask(pg_mode_mask);
 
