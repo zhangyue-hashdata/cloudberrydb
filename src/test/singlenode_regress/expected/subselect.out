@@ -1709,11 +1709,15 @@ select * from x where f1 = 1;
 explain (verbose, costs off)
 with x as (select * from (select f1, random() from subselect_tbl) ss)
 select * from x where f1 = 1;
-              QUERY PLAN              
---------------------------------------
- Seq Scan on public.subselect_tbl
-   Output: subselect_tbl.f1, random()
-   Filter: (subselect_tbl.f1 = 1)
+                     QUERY PLAN                     
+----------------------------------------------------
+ Subquery Scan on x
+   Output: x.f1, x.random
+   Filter: (x.f1 = 1)
+   ->  Shared Scan (share slice:id -1:0)
+         Output: share0_ref1.f1, share0_ref1.random
+         ->  Seq Scan on public.subselect_tbl
+               Output: subselect_tbl.f1, random()
  Optimizer: Postgres query optimizer
 (4 rows)
 
