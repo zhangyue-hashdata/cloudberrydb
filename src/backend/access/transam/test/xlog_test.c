@@ -224,7 +224,8 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_KeepLogSeg)
+		unit_test(test_KeepLogSeg),
+		unit_test(test_KeepLogSeg_max_slot_wal_keep_size)
 	};
 	return run_tests(tests);
 }
