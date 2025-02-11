@@ -35,7 +35,7 @@ drop database gpsd_db_without_hll;
 create database gpsd_db_without_hll;
 
 -- start_ignore
-\! psql -f data/gpsd-without-hll.sql gpsd_db_without_hll
+\! psql -Xf data/gpsd-without-hll.sql gpsd_db_without_hll
 -- end_ignore
 \c gpsd_db_without_hll
 
@@ -101,7 +101,7 @@ drop database gpsd_db_with_hll;
 create database gpsd_db_with_hll;
 
 -- start_ignore
-\! psql -f data/gpsd-with-hll.sql gpsd_db_with_hll
+\! psql -Xf data/gpsd-with-hll.sql gpsd_db_with_hll
 -- end_ignore
 \c gpsd_db_with_hll
 

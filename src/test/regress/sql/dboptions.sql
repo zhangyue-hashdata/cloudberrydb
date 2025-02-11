@@ -24,7 +24,7 @@ create user connlimit_test_user;
 select pg_reload_conf();
 
 -- should fail, because the connection limit is 0
-\! psql -h /tmp limitdb -c "select 'connected'" -U connlimit_test_user
+\! psql -h /tmp limitdb -Xc "select 'connected'" -U connlimit_test_user
 
 -- Test ALLOW_CONNECTIONS
 create database limitdb2 allow_connections = true;
@@ -40,7 +40,7 @@ select gp_segment_id, datconnlimit, datallowconn from gp_dist_random('pg_databas
 order by gp_segment_id;
 
 -- should fail, as we have disallowed connections
-\! psql -h /tmp limitdb2 -c "select 'connected'" -U connlimit_test_user
+\! psql -h /tmp limitdb2 -Xc "select 'connected'" -U connlimit_test_user
 
 -- Test IS_TEMPLATE
 create database templatedb is_template=true;

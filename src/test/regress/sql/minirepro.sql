@@ -87,7 +87,7 @@ analyze minirepro_foo;
 
 -- Run minirepro
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 
 select
     staattnum,
@@ -146,7 +146,7 @@ update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starel
 
 -- Run minirepro
 drop table minirepro_foo; -- this should also delete the pg_statistic tuple for minirepro_foo
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 
 select stavalues3 from pg_statistic where starelid='minirepro_foo'::regclass;
 
@@ -168,7 +168,7 @@ drop table minirepro_foo;
 -- Caution: The following operation will remove the pg_statistic tuple
 -- corresponding to pg_tablespace before it re-inserts it, which may lead to
 -- corrupted stats for pg_tablespace. But, that shouldn't matter too much?
-\! psql -f data/minirepro.sql regression
+\! psql -Xf data/minirepro.sql regression
 
 select
     staattnum,
