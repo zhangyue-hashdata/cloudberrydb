@@ -141,4 +141,7 @@ s/.//gs
 m/ERROR:  can't split update for inherit table: .*/
 s/ERROR:  can't split update for inherit table: .*/ERROR:  can't split update for inherit table:/
 
+# ignore resource queue ids
+m/resource queue id: \d+/
+s/resource queue id: \d+/resource queue id: XXXX/
 -- end_matchsubs
