@@ -675,39 +675,6 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 }
 
 /*
- * A previous run of pg_upgrade might have failed and the new cluster
- * directory recreated, but they might have forgotten to remove
- * the new cluster's tablespace directories.  Therefore, check that
- * new cluster tablespace directories do not already exist.  If
- * they do, it would cause an error while restoring global objects.
- * This allows the failure to be detected at check time, rather than
- * during schema restore.
- */
-static void
-check_for_new_tablespace_dir(ClusterInfo *new_cluster)
-{
-	int		tblnum;
-	char	new_tablespace_dir[MAXPGPATH];
-
-	prep_status("Checking for new cluster tablespace directories");
-
-	for (tblnum = 0; tblnum < os_info.num_old_tablespaces; tblnum++)
-	{
-		struct stat statbuf;
-
-		snprintf(new_tablespace_dir, MAXPGPATH, "%s%s",
-				os_info.old_tablespaces[tblnum],
-				new_cluster->tablespace_suffix);
-
-		if (stat(new_tablespace_dir, &statbuf) == 0 || errno != ENOENT)
-			pg_fatal("new cluster tablespace directory already exists: \"%s\"\n",
-					 new_tablespace_dir);
-	}
-
-	check_ok();
-}
-
-/*
  * create_script_for_old_cluster_deletion()
  *
  *	This is particularly useful for tablespace deletion.
