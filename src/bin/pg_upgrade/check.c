@@ -197,6 +197,9 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 903)
 		old_9_3_check_for_line_data_type_usage(&old_cluster);
 
+	/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
+		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
 
 	teardown_GPDB6_data_type_checks(&old_cluster);
 
