@@ -1,9 +1,7 @@
 /*-------------------------------------------------------------------------
+ *
  * ic_tcp.h
  *	  Motion IPC TCP implements.
- *
- * Portions Copyright (c) 2023, HashData Technology Limited.
- *
  *
  * IDENTIFICATION
  *	    contrib/interconnect/tcp/ic_tcp.h
