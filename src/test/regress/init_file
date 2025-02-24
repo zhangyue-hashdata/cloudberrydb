@@ -180,4 +180,7 @@ s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 # ignore resource queue ids
 m/resource queue id: \d+/
 s/resource queue id: \d+/resource queue id: XXXX/
+
+m/\(cdbmutate\.c\:\d+\)/
+s/\(cdbmutate\.c:\d+\)/\(cdbmutate\.c:XXX\)/
 -- end_matchsubs
