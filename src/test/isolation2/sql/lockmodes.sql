@@ -704,16 +704,17 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 1: ROLLBACK;
 1q:
 
-1: BEGIN;
-1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
--- With GDD enabled, QD will only hold lock on root for insert
-1: select * from show_locks_lockmodes;
-1: ROLLBACK;
-1q:
-
 -- 2.8 Verify behaviors of select with locking clause (i.e. select for update)
 -- when running concurrently with index creation, for Heap tables.
 -- For AO/CO tables, refer to create_index_allows_readonly.source.
+
+-- TODO-CHERRYPICK: uncomment this, when https://github.com/greenplum-db/gpdb-archive/commit/3be17112144 cherry-picked
+-- 1: BEGIN;
+-- 1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
+-- -- With GDD enabled, QD will only hold lock on root for insert
+-- 1: select * from show_locks_lockmodes;
+-- 1: ROLLBACK;
+-- 1q:
 
 1: CREATE TABLE create_index_select_for_update_tbl(a int, b int);
 1: INSERT INTO create_index_select_for_update_tbl SELECT i,i FROM generate_series(1,10)i;
