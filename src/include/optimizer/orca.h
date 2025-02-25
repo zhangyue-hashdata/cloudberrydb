@@ -30,7 +30,7 @@ extern PGDLLIMPORT plan_hint_hook_type plan_hint_hook;
 #else
 
 /* Keep compilers quiet in case the build used --disable-orca */
-static PlannedStmt *
+ __attribute__((unused)) static PlannedStmt *
 optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams)
 {
 	Assert(false);
