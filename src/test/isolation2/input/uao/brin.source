@@ -572,4 +572,3 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 
 RESET enable_seqscan;
-DROP EXTENSION pageinspect;

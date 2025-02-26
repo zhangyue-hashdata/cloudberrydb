@@ -820,8 +820,6 @@ INSERT 1
  1          | 33554432 | 1      | f        | f        | t           | {20 .. 30} 
 (1 row)
 
-<<<<<<< HEAD
-=======
 --------------------------------------------------------------------------------
 -- Summarization with multiple block sequences (segfiles).
 --------------------------------------------------------------------------------
@@ -1257,6 +1255,3 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid) FROM gp_segment_
 
 RESET enable_seqscan;
 RESET
-DROP EXTENSION pageinspect;
-DROP
->>>>>>> 46766ec0380 (brin ao/co: Ensure final range summarization: build)
