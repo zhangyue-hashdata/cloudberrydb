@@ -92,6 +92,8 @@ RESET enable_mergejoin;
 RESET enable_nestloop;
 
 -- check behavior during rescans, as well as correct handling of min/max pct
+-- Cloudberry: does not support laterals completely, rescan specific tests above
+-- start_ignore
 select * from
   (values (0),(100)) v(pct),
   lateral (select count(*) from tenk1 tablesample bernoulli (pct)) ss;
@@ -111,6 +113,7 @@ select pct, count(unique1) from
   (values (0),(100)) v(pct),
   lateral (select * from tenk1 tablesample system (pct)) ss
   group by pct;
+-- end_ignore
 
 -- Cloudberry: we do have to test min/max pct tests though
 select 0 as pct, count(*) from tenk1 tablesample bernoulli (0)
