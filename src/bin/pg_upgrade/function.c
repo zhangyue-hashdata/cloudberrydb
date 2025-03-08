@@ -110,6 +110,8 @@ get_loadable_libraries(void)
 									FirstNormalObjectId);
 			if (PQntuples(res) > 0)
 			{
+				/* XXX: should be unneeded for gpdb6->cloudberry case */
+#if 0
 				if (!found_public_plpython_handler)
 				{
 					pg_log(PG_WARNING,
@@ -133,6 +135,7 @@ get_loadable_libraries(void)
 				}
 				pg_log(PG_WARNING, "    %s\n", active_db->db_name);
 				found_public_plpython_handler = true;
+#endif
 			}
 			PQclear(res);
 		}
