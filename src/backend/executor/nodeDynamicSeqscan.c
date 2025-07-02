@@ -220,10 +220,20 @@ ExecDynamicSeqScan(PlanState *pstate)
 				break;
 		}
 
+retry:
 		slot = ExecProcNode(&node->seqScanState->ss.ps);
 
 		if (!TupIsNull(slot))
+		{
+			if (gp_enable_runtime_filter_pushdown
+				&& !pstate->state->useMppParallelMode
+				&& node->filters)
+			{
+				if (!PassByBloomFilter(&node->ss.ps, node->filters, slot))
+					goto retry;
+			}
 			break;
+		}
 
 		/* No more tuples from this partition. Move to next one. */
 		CleanupOnePartition(node);
