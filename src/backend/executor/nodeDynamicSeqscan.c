@@ -220,7 +220,6 @@ ExecDynamicSeqScan(PlanState *pstate)
 				break;
 		}
 
-retry:
 		slot = ExecProcNode(&node->seqScanState->ss.ps);
 
 		if (!TupIsNull(slot))
@@ -230,7 +229,7 @@ retry:
 				&& node->filters)
 			{
 				if (!PassByBloomFilter(&node->ss.ps, node->filters, slot))
-					goto retry;
+					continue;
 			}
 			break;
 		}
